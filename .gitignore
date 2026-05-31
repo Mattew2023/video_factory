@@ -1,0 +1,52 @@
+# Python cache and local environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node and frontend build output
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.next/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local browser profiles and automation artifacts
+.browser-profile/
+.edge-headless*/
+playwright-report/
+test-results/
+
+# Local run output and scratch files
+server-test.out
+server-test.err
+dashboard-preview.png
+overview-shot*.png
+assets/live-preview.png
+*.log
+*.tmp
+*.temp
+
+# Environment and local editor files
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
