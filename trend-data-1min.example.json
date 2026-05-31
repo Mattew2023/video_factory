@@ -1,0 +1,32 @@
+{
+  "trendData": [
+    {
+      "time": "06:45",
+      "transactionAmount": 80,
+      "adCost": 0.5,
+      "onlineUserCount": 12,
+      "eventType": "投放"
+    },
+    {
+      "time": "06:46",
+      "transactionAmount": 92,
+      "adCost": 0.58,
+      "onlineUserCount": 13,
+      "eventType": ""
+    },
+    {
+      "time": "06:47",
+      "transactionAmount": 108,
+      "adCost": 0.66,
+      "onlineUserCount": 15,
+      "eventType": ""
+    },
+    {
+      "time": "06:48",
+      "transactionAmount": 123,
+      "adCost": 0.74,
+      "onlineUserCount": 16,
+      "eventType": "讲解"
+    }
+  ]
+}
