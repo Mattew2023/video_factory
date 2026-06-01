@@ -7,6 +7,7 @@ import queue
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
@@ -15,14 +16,23 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 
-DEFAULT_FFMPEG = Path(
-    r"C:\Users\27110\AppData\Local\Microsoft\WinGet\Packages"
-    r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe"
-    r"\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe"
+MISSING_FFMPEG_MESSAGE = (
+    "未检测到 ffmpeg，请把 ffmpeg.exe 和 ffprobe.exe "
+    "放到软件目录下的 ffmpeg\\bin 文件夹中，或安装到系统 PATH。"
 )
-DEFAULT_DOWNLOAD_DIR = Path(r"C:\Users\27110\Downloads\Video")
+MISSING_FFPROBE_MESSAGE = (
+    "未检测到 ffprobe，无法自动计算目标大小。请确认 ffmpeg 安装包中包含 ffprobe。"
+)
+DEFAULT_DOWNLOAD_DIR = Path.home() / "Downloads" / "Video"
 MERGED_SUFFIX = "_合并后"
 SUPPORTED_EXTENSIONS = {".mp4", ".ts", ".mkv", ".mov"}
+TARGET_SIZE_MB = 950
+ONE_GB_BYTES = 1024 * 1024 * 1024
+DEFAULT_VIDEO_BITRATE_KBPS = 900
+DEFAULT_AUDIO_BITRATE_KBPS = 96
+LOW_AUDIO_BITRATE_KBPS = 64
+LOW_VIDEO_BITRATE_THRESHOLD_KBPS = 500
+QUALITY_WARNING_VIDEO_BITRATE_KBPS = 300
 
 
 @dataclass
@@ -49,6 +59,40 @@ def creation_flags() -> int:
     if os.name == "nt":
         return getattr(subprocess, "CREATE_NO_WINDOW", 0)
     return 0
+
+
+def program_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def find_command_path(command_names: tuple[str, ...]) -> Path | None:
+    for command_name in command_names:
+        found_path = shutil.which(command_name)
+        if found_path:
+            return Path(found_path)
+    return None
+
+
+def find_local_ffmpeg_path() -> tuple[Path | None, str]:
+    bundled_candidates = (
+        program_dir() / "ffmpeg" / "bin" / "ffmpeg.exe",
+        program_dir() / "ffmpeg" / "ffmpeg.exe",
+    )
+    for candidate in bundled_candidates:
+        if candidate.exists():
+            return candidate, "自带 ffmpeg"
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        winget_packages = Path(local_app_data) / "Microsoft" / "WinGet" / "Packages"
+        for pattern in ("Gyan.FFmpeg_*/*/bin/ffmpeg.exe", "*FFmpeg*/*/bin/ffmpeg.exe"):
+            matches = sorted(winget_packages.glob(pattern), reverse=True)
+            if matches:
+                return matches[0], "WinGet ffmpeg"
+
+    return None, ""
 
 
 def run_text_command(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -162,6 +206,24 @@ def format_file_size(size: int) -> str:
         value /= 1024
 
 
+def calculate_target_bitrates(duration_seconds: float) -> tuple[int, int, str]:
+    target_total_bitrate_kbps = TARGET_SIZE_MB * 8192 / duration_seconds
+    audio_bitrate_kbps = DEFAULT_AUDIO_BITRATE_KBPS
+    target_video_bitrate_kbps = target_total_bitrate_kbps - audio_bitrate_kbps
+
+    if target_video_bitrate_kbps < LOW_VIDEO_BITRATE_THRESHOLD_KBPS:
+        audio_bitrate_kbps = LOW_AUDIO_BITRATE_KBPS
+        target_video_bitrate_kbps = target_total_bitrate_kbps - audio_bitrate_kbps
+
+    video_bitrate_kbps = min(
+        DEFAULT_VIDEO_BITRATE_KBPS,
+        max(1, int(target_video_bitrate_kbps)),
+    )
+    strategy = "常规压小优先" if video_bitrate_kbps == DEFAULT_VIDEO_BITRATE_KBPS else "目标大小兜底"
+
+    return video_bitrate_kbps, audio_bitrate_kbps, strategy
+
+
 class UnifiedVideoToolApp:
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -175,6 +237,7 @@ class UnifiedVideoToolApp:
 
         self.ffmpeg_path: Path | None = None
         self.ffprobe_path: Path | None = None
+        self.ffmpeg_source = ""
         self.current_process: subprocess.Popen[str] | None = None
         self.cancel_requested = False
         self.compress_started_at = 0.0
@@ -338,49 +401,47 @@ class UnifiedVideoToolApp:
         self.log_text.grid(row=1, column=0, sticky="nsew")
 
     def refresh_tools(self) -> None:
-        self.ffmpeg_path = self.find_ffmpeg_path()
-        self.ffprobe_path = self.find_ffprobe_path(self.ffmpeg_path)
+        self.ffmpeg_path, self.ffprobe_path, self.ffmpeg_source = self.find_ffmpeg_tools()
 
-        if self.ffmpeg_path:
-            if self.ffprobe_path:
-                self.ffmpeg_text.set(f"{self.ffmpeg_path}")
-                self.write_log(f"已检测到 ffmpeg：{self.ffmpeg_path}")
-                self.write_log(f"已检测到 ffprobe：{self.ffprobe_path}")
-            else:
-                self.ffmpeg_text.set(f"{self.ffmpeg_path}（未找到 ffprobe）")
-                self.write_log(f"已检测到 ffmpeg：{self.ffmpeg_path}")
-                self.write_log("未检测到 ffprobe，抖音合并功能暂不可用。")
+        if self.ffmpeg_path and self.ffprobe_path:
+            self.ffmpeg_text.set(f"当前使用：{self.ffmpeg_source} | {self.ffmpeg_path}")
+            self.write_log(f"已检测到 ffmpeg：{self.ffmpeg_path}")
+            self.write_log(f"已检测到 ffprobe：{self.ffprobe_path}")
+        elif self.ffmpeg_path:
+            self.ffmpeg_text.set("未检测到 ffprobe")
+            self.write_log(MISSING_FFPROBE_MESSAGE)
+            messagebox.showerror("未检测到 ffprobe", MISSING_FFPROBE_MESSAGE)
         else:
             self.ffmpeg_text.set("未检测到 ffmpeg")
-            self.write_log("未检测到 ffmpeg，请安装 ffmpeg 或把 ffmpeg 放到本工具同级目录的 ffmpeg\\bin 中。")
+            self.write_log(MISSING_FFMPEG_MESSAGE)
+            messagebox.showerror("未检测到 ffmpeg", MISSING_FFMPEG_MESSAGE)
 
-    def find_ffmpeg_path(self) -> Path | None:
-        script_dir = Path(__file__).resolve().parent
-        candidates = [
-            script_dir / "ffmpeg" / "bin" / "ffmpeg.exe",
-            DEFAULT_FFMPEG,
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
+    def find_ffmpeg_tools(self) -> tuple[Path | None, Path | None, str]:
+        ffmpeg_path, ffmpeg_source = find_local_ffmpeg_path()
+        if not ffmpeg_path:
+            ffmpeg_path = find_command_path(("ffmpeg.exe", "ffmpeg"))
+            ffmpeg_source = "系统 PATH" if ffmpeg_path else ""
 
-        for command_name in ("ffmpeg.exe", "ffmpeg"):
-            found_path = shutil.which(command_name)
-            if found_path:
-                return Path(found_path)
-        return None
+        if not ffmpeg_path:
+            return None, None, ""
 
-    def find_ffprobe_path(self, ffmpeg_path: Path | None) -> Path | None:
-        if ffmpeg_path:
-            candidate = ffmpeg_path.with_name("ffprobe.exe")
-            if candidate.exists():
-                return candidate
+        same_dir_ffprobe = ffmpeg_path.parent / "ffprobe.exe"
+        if same_dir_ffprobe.exists():
+            return ffmpeg_path, same_dir_ffprobe, ffmpeg_source
 
-        for command_name in ("ffprobe.exe", "ffprobe"):
-            found_path = shutil.which(command_name)
-            if found_path:
-                return Path(found_path)
-        return None
+        path_ffprobe = find_command_path(("ffprobe.exe", "ffprobe"))
+        if path_ffprobe:
+            return ffmpeg_path, path_ffprobe, f"{ffmpeg_source} + PATH ffprobe"
+
+        return ffmpeg_path, None, ffmpeg_source
+
+    def ensure_ffmpeg_tools_available(self) -> bool:
+        if self.ffmpeg_path and self.ffprobe_path:
+            return True
+        self.refresh_tools()
+        if self.ffmpeg_path and self.ffprobe_path:
+            return True
+        return False
 
     def select_merge_dir(self) -> None:
         dir_path = filedialog.askdirectory(
@@ -429,11 +490,7 @@ class UnifiedVideoToolApp:
     def start_merge(self) -> None:
         if not self.ensure_idle():
             return
-        if not self.ffmpeg_path:
-            messagebox.showerror("未检测到 ffmpeg", "请先安装 ffmpeg 或点击“重新检测”。")
-            return
-        if not self.ffprobe_path:
-            messagebox.showerror("未检测到 ffprobe", "抖音合并需要 ffprobe，请检查 ffmpeg 安装目录。")
+        if not self.ensure_ffmpeg_tools_available():
             return
         if not self.merge_dir.exists():
             messagebox.showerror("目录不存在", "选择的扫描目录不存在，请重新选择。")
@@ -566,11 +623,7 @@ class UnifiedVideoToolApp:
     def start_compress(self) -> None:
         if not self.ensure_idle():
             return
-        if not self.ffmpeg_path:
-            messagebox.showerror("未检测到 ffmpeg", "请先安装 ffmpeg 或点击“重新检测”。")
-            return
-        if not self.ffprobe_path:
-            messagebox.showerror("未检测到 ffprobe", "视频压缩需要 ffprobe 获取视频时长。")
+        if not self.ensure_ffmpeg_tools_available():
             return
         if not self.input_file:
             messagebox.showwarning("缺少视频文件", "请先点击“选择文件”。")
@@ -633,7 +686,17 @@ class UnifiedVideoToolApp:
             self.post_compress_progress(status="用户取消")
             return
 
+        video_bitrate_kbps, audio_bitrate_kbps, strategy = calculate_target_bitrates(duration)
+        bufsize_kbps = video_bitrate_kbps * 2
+
         self.log(f"视频总时长：{format_seconds(duration)}")
+        self.log(f"目标大小：{TARGET_SIZE_MB} MB")
+        self.log(f"原文件大小：{format_file_size(original_size)}")
+        self.log(f"压缩策略：{strategy}")
+        self.log(f"自动计算的视频码率：{video_bitrate_kbps}k")
+        self.log(f"音频码率：{audio_bitrate_kbps}k")
+        if video_bitrate_kbps < QUALITY_WARNING_VIDEO_BITRATE_KBPS:
+            self.log("视频时长过长，压到 1GB 以下会明显损失画质。")
         self.post_compress_progress(
             status="正在压缩",
             percent=0,
@@ -653,15 +716,15 @@ class UnifiedVideoToolApp:
             "-c:v",
             "libx264",
             "-b:v",
-            "900k",
+            f"{video_bitrate_kbps}k",
             "-maxrate",
-            "900k",
+            f"{video_bitrate_kbps}k",
             "-bufsize",
-            "1800k",
+            f"{bufsize_kbps}k",
             "-c:a",
             "aac",
             "-b:a",
-            "96k",
+            f"{audio_bitrate_kbps}k",
             str(output_file),
         ]
 
@@ -1039,12 +1102,15 @@ class UnifiedVideoToolApp:
         ratio = 0.0
         if original_size > 0:
             ratio = (1 - compressed_size / original_size) * 100
+        under_one_gb = "是" if compressed_size < ONE_GB_BYTES else "否"
 
         return "\n".join(
             [
                 f"输出文件：{output_file}",
+                f"目标大小：{TARGET_SIZE_MB} MB",
                 f"原文件大小：{format_file_size(original_size)}",
                 f"压缩后文件大小：{format_file_size(compressed_size)}",
+                f"是否小于 1GB：{under_one_gb}",
                 f"压缩率：{ratio:.1f}%",
                 f"总耗时：{format_seconds(elapsed)}",
             ]
