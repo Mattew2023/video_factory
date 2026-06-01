@@ -2,8 +2,7 @@
 setlocal
 
 set "SCRIPT=%~dp0douyin_merge_compress_tool.py"
-set "CODEX_PYTHONW=C:\Users\27110\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\pythonw.exe"
-set "CODEX_PYTHON=C:\Users\27110\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+set "BUNDLED_PYTHON=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 
 if not exist "%SCRIPT%" (
     echo Missing script:
@@ -12,35 +11,30 @@ if not exist "%SCRIPT%" (
     exit /b 1
 )
 
-if exist "%CODEX_PYTHONW%" (
-    start "" "%CODEX_PYTHONW%" "%SCRIPT%"
-    exit /b 0
-)
-
-if exist "%CODEX_PYTHON%" (
-    start "" "%CODEX_PYTHON%" "%SCRIPT%"
-    exit /b 0
-)
-
-where pythonw >nul 2>nul
-if not errorlevel 1 (
-    start "" pythonw "%SCRIPT%"
-    exit /b 0
+if exist "%BUNDLED_PYTHON%" (
+    "%BUNDLED_PYTHON%" "%SCRIPT%"
+    if errorlevel 1 pause
+    exit /b %errorlevel%
 )
 
 where python >nul 2>nul
 if not errorlevel 1 (
-    start "" python "%SCRIPT%"
-    exit /b 0
+    python "%SCRIPT%"
+    if errorlevel 1 pause
+    exit /b %errorlevel%
 )
 
 where py >nul 2>nul
 if not errorlevel 1 (
-    start "" py -3 "%SCRIPT%"
-    exit /b 0
+    py -3 -c "import tkinter" >nul 2>nul
+    if not errorlevel 1 (
+        py -3 "%SCRIPT%"
+        if errorlevel 1 pause
+        exit /b %errorlevel%
+    )
 )
 
 echo Python was not found.
-echo Please install Python 3 or check the bundled Codex Python path.
+echo Please install Python 3, or package this tool as an exe before sharing it.
 pause
 exit /b 1
