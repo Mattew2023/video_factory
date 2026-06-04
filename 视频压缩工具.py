@@ -97,8 +97,8 @@ class VideoCompressorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("视频压缩工具 MVP")
-        self.root.geometry("720x460")
-        self.root.minsize(640, 420)
+        self.root.geometry("820x500")
+        self.root.minsize(740, 440)
 
         self.input_files = []
         self.output_dir = None
@@ -128,7 +128,7 @@ class VideoCompressorApp:
             width=16,
             command=self.select_video_file,
         )
-        self.select_file_button.pack(side=tk.LEFT, padx=(0, 8))
+        self.select_file_button.grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 8))
 
         self.select_multi_files_button = tk.Button(
             top_frame,
@@ -136,7 +136,13 @@ class VideoCompressorApp:
             width=16,
             command=self.select_video_files,
         )
-        self.select_multi_files_button.pack(side=tk.LEFT, padx=(0, 8))
+        self.select_multi_files_button.grid(
+            row=0,
+            column=1,
+            sticky="w",
+            padx=(0, 8),
+            pady=(0, 8),
+        )
 
         self.select_output_button = tk.Button(
             top_frame,
@@ -144,7 +150,7 @@ class VideoCompressorApp:
             width=14,
             command=self.select_output_dir,
         )
-        self.select_output_button.pack(side=tk.LEFT, padx=(0, 8))
+        self.select_output_button.grid(row=1, column=0, sticky="w", padx=(0, 8))
 
         self.start_button = tk.Button(
             top_frame,
@@ -152,7 +158,7 @@ class VideoCompressorApp:
             width=14,
             command=self.start_compress,
         )
-        self.start_button.pack(side=tk.LEFT, padx=(0, 8))
+        self.start_button.grid(row=1, column=1, sticky="w", padx=(0, 8))
 
         self.open_output_button = tk.Button(
             top_frame,
@@ -160,7 +166,7 @@ class VideoCompressorApp:
             width=14,
             command=self.open_output_dir,
         )
-        self.open_output_button.pack(side=tk.LEFT)
+        self.open_output_button.grid(row=1, column=2, sticky="w")
 
         ffmpeg_frame = tk.Frame(self.root, padx=12, pady=(0, 8))
         ffmpeg_frame.pack(fill=tk.X)
@@ -245,6 +251,7 @@ class VideoCompressorApp:
         # filedialog.askopenfilename 会弹出“选择文件”窗口。
         # 这样你不需要手动复制视频路径，选中文件后 Python 会拿到完整路径。
         file_path = filedialog.askopenfilename(
+            parent=self.root,
             title="选择视频文件",
             filetypes=VIDEO_FILETYPES,
         )
@@ -267,6 +274,7 @@ class VideoCompressorApp:
 
     def select_video_files(self):
         file_paths = filedialog.askopenfilenames(
+            parent=self.root,
             title="选择多个视频文件",
             filetypes=VIDEO_FILETYPES,
         )
@@ -311,7 +319,7 @@ class VideoCompressorApp:
     def select_output_dir(self):
         # filedialog.askdirectory 会弹出“选择文件夹”窗口。
         # 本工具要求你必须选择输出目录，避免误把文件写回正在恢复数据的磁盘目录。
-        dir_path = filedialog.askdirectory(title="选择输出目录")
+        dir_path = filedialog.askdirectory(parent=self.root, title="选择输出目录")
 
         if not dir_path:
             return

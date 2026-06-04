@@ -26,6 +26,14 @@ MISSING_FFPROBE_MESSAGE = (
 DEFAULT_DOWNLOAD_DIR = Path.home() / "Downloads" / "Video"
 MERGED_SUFFIX = "_合并后"
 SUPPORTED_EXTENSIONS = {".mp4", ".ts", ".mkv", ".mov"}
+VIDEO_FILETYPES = [
+    ("支持的视频文件", "*.mp4 *.ts *.mkv *.mov"),
+    ("MP4 文件", "*.mp4"),
+    ("TS 文件", "*.ts"),
+    ("MKV 文件", "*.mkv"),
+    ("MOV 文件", "*.mov"),
+    ("所有文件", "*.*"),
+]
 TARGET_SIZE_MB = 950
 ONE_GB_BYTES = 1024 * 1024 * 1024
 DEFAULT_VIDEO_BITRATE_KBPS = 900
@@ -206,6 +214,13 @@ def format_file_size(size: int) -> str:
         value /= 1024
 
 
+def short_error_message(message: object, max_length: int = 300) -> str:
+    one_line_message = " ".join(str(message).split())
+    if len(one_line_message) <= max_length:
+        return one_line_message
+    return one_line_message[:max_length] + "..."
+
+
 def calculate_target_bitrates(duration_seconds: float) -> tuple[int, int, str]:
     target_total_bitrate_kbps = TARGET_SIZE_MB * 8192 / duration_seconds
     audio_bitrate_kbps = DEFAULT_AUDIO_BITRATE_KBPS
@@ -242,7 +257,7 @@ class UnifiedVideoToolApp:
         self.cancel_requested = False
         self.compress_started_at = 0.0
         self.merge_dir = DEFAULT_DOWNLOAD_DIR
-        self.input_file: Path | None = None
+        self.input_files: list[Path] = []
         self.output_dir: Path | None = None
 
         self.ffmpeg_text = tk.StringVar(value="正在检测 ffmpeg...")
@@ -320,9 +335,17 @@ class UnifiedVideoToolApp:
         ttk.Entry(parent, textvariable=self.input_file_text, state="readonly").grid(
             row=0, column=1, sticky="ew", padx=(8, 8), pady=(0, 8)
         )
-        file_button = ttk.Button(parent, text="选择文件", command=self.select_video_file)
+        file_button = ttk.Button(parent, text="选择视频文件", command=self.select_video_file)
         file_button.grid(row=0, column=2, sticky="e", pady=(0, 8))
         self.controls.append(file_button)
+
+        multi_file_button = ttk.Button(
+            parent,
+            text="选择多个视频文件",
+            command=self.select_video_files,
+        )
+        multi_file_button.grid(row=0, column=3, sticky="e", pady=(0, 8), padx=(8, 0))
+        self.controls.append(multi_file_button)
 
         ttk.Label(parent, text="输出目录").grid(row=1, column=0, sticky="w", pady=(0, 8))
         ttk.Entry(parent, textvariable=self.output_dir_text, state="readonly").grid(
@@ -331,6 +354,14 @@ class UnifiedVideoToolApp:
         dir_button = ttk.Button(parent, text="选择目录", command=self.select_output_dir)
         dir_button.grid(row=1, column=2, sticky="e", pady=(0, 8))
         self.controls.append(dir_button)
+
+        open_dir_button = ttk.Button(
+            parent,
+            text="打开输出目录",
+            command=self.open_selected_output_dir,
+        )
+        open_dir_button.grid(row=1, column=3, sticky="e", pady=(0, 8), padx=(8, 0))
+        self.controls.append(open_dir_button)
 
         start_button = ttk.Button(parent, text="开始压缩", command=self.start_compress)
         start_button.grid(row=2, column=1, sticky="w", padx=(8, 8), pady=(4, 0))
@@ -457,14 +488,7 @@ class UnifiedVideoToolApp:
     def select_video_file(self) -> None:
         file_path = filedialog.askopenfilename(
             title="选择视频文件",
-            filetypes=[
-                ("支持的视频文件", "*.mp4 *.ts *.mkv *.mov"),
-                ("MP4 文件", "*.mp4"),
-                ("TS 文件", "*.ts"),
-                ("MKV 文件", "*.mkv"),
-                ("MOV 文件", "*.mov"),
-                ("所有文件", "*.*"),
-            ],
+            filetypes=VIDEO_FILETYPES,
         )
         if not file_path:
             return
@@ -474,9 +498,57 @@ class UnifiedVideoToolApp:
             messagebox.showwarning("格式不支持", "暂时只支持 .mp4 / .ts / .mkv / .mov 文件。")
             return
 
-        self.input_file = input_file
-        self.input_file_text.set(str(self.input_file))
-        self.write_log(f"已选择视频文件：{self.input_file}")
+        self.input_files = [input_file]
+        self.input_file_text.set(str(input_file))
+        self.write_log(f"已选择视频文件：{input_file}")
+        self.write_log("共选择 1 个视频。")
+
+    def select_video_files(self) -> None:
+        file_paths = filedialog.askopenfilenames(
+            title="选择多个视频文件",
+            filetypes=VIDEO_FILETYPES,
+        )
+        if not file_paths:
+            return
+
+        selected_files = [Path(file_path) for file_path in file_paths]
+        supported_files = [
+            input_file
+            for input_file in selected_files
+            if input_file.suffix.lower() in SUPPORTED_EXTENSIONS
+        ]
+        unsupported_files = [
+            input_file
+            for input_file in selected_files
+            if input_file.suffix.lower() not in SUPPORTED_EXTENSIONS
+        ]
+
+        if unsupported_files:
+            unsupported_names = "\n".join(
+                input_file.name for input_file in unsupported_files[:10]
+            )
+            if len(unsupported_files) > 10:
+                unsupported_names += f"\n……以及另外 {len(unsupported_files) - 10} 个文件"
+            messagebox.showwarning(
+                "格式不支持",
+                "以下文件已忽略：\n"
+                f"{unsupported_names}\n\n"
+                "暂时只支持 .mp4 / .ts / .mkv / .mov 文件。",
+            )
+
+        if not supported_files:
+            return
+
+        self.input_files = supported_files
+        if len(supported_files) == 1:
+            self.input_file_text.set(str(supported_files[0]))
+        else:
+            self.input_file_text.set(f"已选择 {len(supported_files)} 个视频")
+
+        self.write_log("")
+        self.write_log(f"共选择 {len(self.input_files)} 个视频。")
+        for index, input_file in enumerate(self.input_files, start=1):
+            self.write_log(f"{index}. {input_file}")
 
     def select_output_dir(self) -> None:
         dir_path = filedialog.askdirectory(title="选择输出目录")
@@ -486,6 +558,13 @@ class UnifiedVideoToolApp:
         self.output_dir = Path(dir_path)
         self.output_dir_text.set(str(self.output_dir))
         self.write_log(f"已选择输出目录：{self.output_dir}")
+
+    def open_selected_output_dir(self) -> None:
+        if not self.output_dir:
+            messagebox.showwarning("缺少输出目录", "请先点击“选择目录”。")
+            return
+
+        self.open_directory(self.output_dir)
 
     def start_merge(self) -> None:
         if not self.ensure_idle():
@@ -625,26 +704,29 @@ class UnifiedVideoToolApp:
             return
         if not self.ensure_ffmpeg_tools_available():
             return
-        if not self.input_file:
-            messagebox.showwarning("缺少视频文件", "请先点击“选择文件”。")
+        if not self.input_files:
+            messagebox.showwarning(
+                "缺少视频文件",
+                "请先点击“选择视频文件”或“选择多个视频文件”。",
+            )
             return
         if not self.output_dir:
             messagebox.showwarning("缺少输出目录", "请先点击“选择目录”。")
             return
-        if not self.input_file.exists():
+        if len(self.input_files) == 1 and not self.input_files[0].exists():
             messagebox.showerror("文件不存在", "选择的视频文件不存在，请重新选择。")
             return
         if not self.output_dir.exists():
             messagebox.showerror("目录不存在", "选择的输出目录不存在，请重新选择。")
             return
 
-        output_file = self.build_unique_output_path(self.input_file, self.output_dir)
+        input_files = list(self.input_files)
         self.reset_compress_progress("准备中")
         self.cancel_requested = False
         self.start_worker(
-            self.run_compress,
-            self.input_file,
-            output_file,
+            self.run_batch_compress,
+            input_files,
+            self.output_dir,
             self.ffmpeg_path,
             self.ffprobe_path,
         )
@@ -658,17 +740,127 @@ class UnifiedVideoToolApp:
             index += 1
         return output_file
 
+    def run_batch_compress(
+        self,
+        input_files: list[Path],
+        output_dir: Path,
+        ffmpeg: Path,
+        ffprobe: Path,
+    ) -> None:
+        total_count = len(input_files)
+        success_count = 0
+        failed_items: list[tuple[Path, str]] = []
+
+        self.log("")
+        self.log("开始压缩...")
+        self.log(f"共选择 {total_count} 个视频。")
+        self.log(f"输出目录：{output_dir}")
+
+        for index, input_file in enumerate(input_files, start=1):
+            if self.cancel_requested:
+                self.log("用户取消压缩，已停止后续队列。")
+                self.post_compress_progress(status="用户取消")
+                break
+
+            output_file = self.build_unique_output_path(input_file, output_dir)
+            self.log("")
+            self.log(f"当前正在压缩第 {index} / {total_count} 个")
+            self.log(f"当前输入文件名：{input_file.name}")
+            self.log(f"当前输入文件路径：{input_file}")
+            self.log(f"当前输出文件路径：{output_file}")
+            self.post_compress_progress(
+                status=f"第 {index}/{total_count} 个：准备中",
+                percent=0,
+                elapsed=0,
+                remaining=None,
+                current=0,
+                total=None,
+            )
+
+            try:
+                result = self.run_compress(
+                    input_file,
+                    output_file,
+                    ffmpeg,
+                    ffprobe,
+                    show_result=False,
+                )
+            except Exception as exc:
+                result = {"success": False, "error": f"发生异常：{exc}"}
+                self.log(result["error"])
+
+            if result.get("cancelled"):
+                self.log("用户取消压缩，已停止后续队列。")
+                break
+
+            if result.get("success"):
+                success_count += 1
+                compressed_size = int(result.get("compressed_size", 0))
+                under_one_gb = "是" if compressed_size < ONE_GB_BYTES else "否"
+                self.log(f"当前视频压缩完成后的大小：{format_file_size(compressed_size)}")
+                self.log(f"是否小于 1GB：{under_one_gb}")
+            else:
+                error_message = str(result.get("error") or "未知错误")
+                failed_items.append((input_file, error_message))
+                self.log(f"本视频压缩失败：{short_error_message(error_message)}")
+
+        self.log("")
+        self.log("批量压缩完成。")
+        self.log(f"最后汇总：成功 {success_count} 个，失败 {len(failed_items)} 个。")
+        if failed_items:
+            self.log("失败列表：")
+            for input_file, error_message in failed_items:
+                self.log(f"- {input_file.name}：{short_error_message(error_message)}")
+
+        summary_lines = [
+            f"共选择 {total_count} 个视频。",
+            f"成功 {success_count} 个，失败 {len(failed_items)} 个。",
+            f"输出目录：{output_dir}",
+        ]
+        if failed_items:
+            summary_lines.append("")
+            summary_lines.append("失败列表：")
+            for input_file, error_message in failed_items:
+                summary_lines.append(
+                    f"- {input_file.name}：{short_error_message(error_message)}"
+                )
+
+        self.post_compress_progress(
+            status="批量压缩完成",
+            percent=100,
+            remaining=0,
+        )
+        self.post_compress_result("批量压缩完成", "\n".join(summary_lines))
+        self.post_open_output_dir(output_dir)
+
     def run_compress(
         self,
         input_file: Path,
         output_file: Path,
         ffmpeg: Path,
         ffprobe: Path,
-    ) -> None:
+        show_result: bool = True,
+    ) -> dict[str, object]:
         self.log("")
         self.log("准备压缩")
         self.log(f"输入文件：{input_file}")
         self.log(f"输出文件：{output_file}")
+
+        if not input_file.exists():
+            message = "视频文件不存在，请重新选择。"
+            self.log(message)
+            self.post_compress_progress(status="压缩失败")
+            if show_result:
+                self.post_compress_result("压缩失败", message, is_error=True)
+            return {"success": False, "error": message}
+
+        if input_file.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            message = "格式不支持，暂时只支持 .mp4 / .ts / .mkv / .mov 文件。"
+            self.log(message)
+            self.post_compress_progress(status="压缩失败")
+            if show_result:
+                self.post_compress_result("压缩失败", message, is_error=True)
+            return {"success": False, "error": message}
 
         original_size = input_file.stat().st_size
         self.compress_started_at = time.monotonic()
@@ -679,12 +871,13 @@ class UnifiedVideoToolApp:
             message = "无法获取视频总时长，已停止压缩。"
             self.log(message)
             self.post_compress_progress(status="压缩失败")
-            self.post_compress_result("压缩失败", message, is_error=True)
-            return
+            if show_result:
+                self.post_compress_result("压缩失败", message, is_error=True)
+            return {"success": False, "error": message}
         if self.cancel_requested:
             self.log("用户取消压缩。")
             self.post_compress_progress(status="用户取消")
-            return
+            return {"success": False, "cancelled": True, "error": "用户取消压缩。"}
 
         video_bitrate_kbps, audio_bitrate_kbps, strategy = calculate_target_bitrates(duration)
         bufsize_kbps = video_bitrate_kbps * 2
@@ -781,7 +974,7 @@ class UnifiedVideoToolApp:
         if self.cancel_requested:
             self.log("用户取消压缩。")
             self.post_compress_progress(status="用户取消")
-            return
+            return {"success": False, "cancelled": True, "error": "用户取消压缩。"}
 
         if return_code == 0:
             compressed_size = output_file.stat().st_size if output_file.exists() else 0
@@ -801,14 +994,22 @@ class UnifiedVideoToolApp:
                 total=duration,
                 remaining=0,
             )
-            self.post_compress_result("压缩完成", summary, output_path=output_file)
-            return
+            if show_result:
+                self.post_compress_result("压缩完成", summary, output_path=output_file)
+            return {
+                "success": True,
+                "output_file": output_file,
+                "compressed_size": compressed_size,
+                "summary": summary,
+            }
 
         error_text = self.build_error_summary(return_code, error_lines)
         self.log("压缩失败")
         self.log(error_text)
         self.post_compress_progress(status="压缩失败")
-        self.post_compress_result("压缩失败", error_text, is_error=True)
+        if show_result:
+            self.post_compress_result("压缩失败", error_text, is_error=True)
+        return {"success": False, "error": error_text}
 
     def probe_video_duration(self, input_file: Path, ffprobe: Path) -> float:
         result = run_text_command(
@@ -944,6 +1145,14 @@ class UnifiedVideoToolApp:
             }
         )
 
+    def post_open_output_dir(self, output_dir: Path) -> None:
+        self.log_queue.put(
+            {
+                "type": "open_output_dir",
+                "output_dir": str(output_dir),
+            }
+        )
+
     def show_compress_result(self, event: dict) -> None:
         if event.get("is_error"):
             messagebox.showerror(event["title"], event["message"])
@@ -1010,6 +1219,20 @@ class UnifiedVideoToolApp:
         dialog.geometry(f"+{x}+{y}")
         dialog.grab_set()
         dialog.focus_set()
+
+    def open_directory(self, output_dir: Path, show_error: bool = True) -> None:
+        try:
+            if not output_dir.exists():
+                raise FileNotFoundError(output_dir)
+            if os.name == "nt":
+                os.startfile(str(output_dir))
+            else:
+                subprocess.Popen(["xdg-open", str(output_dir)])
+        except Exception as exc:
+            message = f"打开输出目录失败：{output_dir}\n{exc}"
+            self.log(message)
+            if show_error:
+                messagebox.showerror("打开输出目录失败", message)
 
     def open_output_folder(self, output_path: Path) -> None:
         try:
@@ -1139,12 +1362,12 @@ class UnifiedVideoToolApp:
             target(*args)
         except FileNotFoundError as exc:
             self.log(f"找不到外部程序或文件：{exc}")
-            if getattr(target, "__name__", "") == "run_compress":
+            if getattr(target, "__name__", "") in {"run_compress", "run_batch_compress"}:
                 self.post_compress_progress(status="压缩失败")
                 self.post_compress_result("压缩失败", f"找不到外部程序或文件：{exc}", is_error=True)
         except Exception as exc:
             self.log(f"发生异常：{exc}")
-            if getattr(target, "__name__", "") == "run_compress":
+            if getattr(target, "__name__", "") in {"run_compress", "run_batch_compress"}:
                 self.post_compress_progress(status="压缩失败")
                 self.post_compress_result("压缩失败", f"发生异常：{exc}", is_error=True)
         finally:
@@ -1160,6 +1383,8 @@ class UnifiedVideoToolApp:
                         self.apply_compress_progress(message)
                     elif message_type == "compress_result":
                         self.show_compress_result(message)
+                    elif message_type == "open_output_dir":
+                        self.open_directory(Path(message["output_dir"]), show_error=False)
                 elif message == "__TASK_FINISHED__":
                     self.is_running = False
                     self.current_process = None
