@@ -8,7 +8,7 @@ import sys
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 
 SUPPORTED_EXTENSIONS = {".mp4", ".ts", ".mkv", ".mov"}
@@ -22,6 +22,7 @@ VIDEO_FILETYPES = [
 ]
 TASK_FINISHED_MESSAGE = "__TASK_FINISHED__"
 OPEN_OUTPUT_DIR_MESSAGE = "__OPEN_OUTPUT_DIR__"
+PROGRESS_MESSAGE = "__PROGRESS__"
 TARGET_SIZE_MB = 950
 ONE_GB_BYTES = 1024 * 1024 * 1024
 DEFAULT_VIDEO_BITRATE_KBPS = 900
@@ -109,6 +110,10 @@ class VideoCompressorApp:
         self.tool_error_title = "未检测到 ffmpeg"
         self.tool_error_message = MISSING_FFMPEG_MESSAGE
         self.ffmpeg_text = tk.StringVar(value="正在检测 ffmpeg...")
+        self.overall_progress_value = tk.DoubleVar(value=0)
+        self.current_progress_value = tk.DoubleVar(value=0)
+        self.overall_progress_text = tk.StringVar(value="整体进度：第 0 / 0 个，整体百分比 0%")
+        self.current_progress_text = tk.StringVar(value="当前视频进度：0%")
 
         # queue.Queue 用来让后台线程把消息安全地交给主界面。
         # Tkinter 的界面更新必须尽量放在主线程里做，所以后台线程不直接操作文本框。
@@ -185,6 +190,36 @@ class VideoCompressorApp:
         self.check_ffmpeg_button.pack(
             side=tk.RIGHT
         )
+
+        progress_frame = tk.Frame(self.root, padx=12, pady=(0, 8))
+        progress_frame.pack(fill=tk.X)
+        progress_frame.columnconfigure(1, weight=1)
+
+        tk.Label(progress_frame, textvariable=self.overall_progress_text, anchor="w").grid(
+            row=0,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            pady=(0, 4),
+        )
+        ttk.Progressbar(
+            progress_frame,
+            variable=self.overall_progress_value,
+            maximum=100,
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+
+        tk.Label(progress_frame, textvariable=self.current_progress_text, anchor="w").grid(
+            row=2,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            pady=(0, 4),
+        )
+        ttk.Progressbar(
+            progress_frame,
+            variable=self.current_progress_value,
+            maximum=100,
+        ).grid(row=3, column=0, columnspan=2, sticky="ew")
 
         # scrolledtext 是带滚动条的文本区域，用来显示文件路径和执行状态。
         self.log_text = scrolledtext.ScrolledText(
@@ -393,6 +428,7 @@ class VideoCompressorApp:
         input_files = list(self.input_files)
         self.is_running = True
         self.set_buttons_state(tk.DISABLED)
+        self.reset_progress(len(input_files))
         self.write_log("")
         self.write_log("开始压缩...")
         self.write_log(f"共选择 {len(input_files)} 个视频。")
@@ -483,6 +519,47 @@ class VideoCompressorApp:
 
         return video_bitrate_kbps, audio_bitrate_kbps, strategy
 
+    def parse_progress_seconds(self, key, value):
+        try:
+            if key in {"out_time_ms", "out_time_us"}:
+                return max(0.0, int(value) / 1_000_000)
+            if key == "out_time":
+                hours, minutes, seconds = value.split(":")
+                return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+        except (ValueError, TypeError):
+            return None
+
+        return None
+
+    def collect_stderr(self, process, error_lines):
+        if process.stderr is None:
+            return
+
+        for raw_line in process.stderr:
+            line = raw_line.strip()
+            if not line:
+                continue
+            error_lines.append(line)
+            if len(error_lines) > 80:
+                del error_lines[:20]
+
+    def queue_progress(self, completed_count, total_count, current_file_progress, current_index):
+        if total_count <= 0:
+            overall_progress = 0
+        else:
+            overall_progress = (completed_count + current_file_progress) / total_count
+
+        self.log_queue.put(
+            {
+                "type": PROGRESS_MESSAGE,
+                "completed_count": completed_count,
+                "total_count": total_count,
+                "current_index": current_index,
+                "current_file_progress": current_file_progress,
+                "overall_progress": overall_progress,
+            }
+        )
+
     def run_batch_compress(self, input_files, output_dir):
         total_count = len(input_files)
         success_count = 0
@@ -491,24 +568,34 @@ class VideoCompressorApp:
         try:
             for index, input_file in enumerate(input_files, start=1):
                 output_file = self.build_unique_output_path(input_file, output_dir)
+                completed_count = index - 1
 
                 self.log_queue.put("")
                 self.log_queue.put(f"当前正在压缩第 {index} / {total_count} 个")
                 self.log_queue.put(f"当前输入文件名：{input_file.name}")
                 self.log_queue.put(f"当前输入文件路径：{input_file}")
                 self.log_queue.put(f"当前输出文件路径：{output_file}")
+                self.queue_progress(completed_count, total_count, 0, index)
 
-                result = self.compress_single_video(input_file, output_file)
+                result = self.compress_single_video(
+                    input_file,
+                    output_file,
+                    completed_count,
+                    total_count,
+                    index,
+                )
                 if result["success"]:
                     success_count += 1
                     compressed_size_bytes = result["size_bytes"]
                     is_under_one_gb = "是" if result["is_under_one_gb"] else "否"
+                    self.queue_progress(completed_count, total_count, 1.0, index)
                     self.log_queue.put(
                         f"当前视频压缩完成后的大小：{format_file_size(compressed_size_bytes)}"
                     )
                     self.log_queue.put(f"是否小于 1GB：{is_under_one_gb}")
                 else:
                     failed_items.append((input_file, result["error"]))
+                    self.queue_progress(completed_count, total_count, 1.0, index)
                     self.log_queue.put(
                         f"本视频压缩失败：{short_error_message(result['error'])}"
                     )
@@ -524,11 +611,19 @@ class VideoCompressorApp:
                     self.log_queue.put(
                         f"- {input_file.name}：{short_error_message(error_message)}"
                     )
+            self.queue_progress(total_count, total_count, 0, total_count)
         finally:
             self.log_queue.put(TASK_FINISHED_MESSAGE)
             self.log_queue.put((OPEN_OUTPUT_DIR_MESSAGE, str(output_dir)))
 
-    def compress_single_video(self, input_file, output_file):
+    def compress_single_video(
+        self,
+        input_file,
+        output_file,
+        completed_count=0,
+        total_count=1,
+        current_index=1,
+    ):
         # subprocess 负责从 Python 调用外部命令。
         # 这里调用的就是你在终端里可以直接运行的 ffmpeg。
         #
@@ -559,6 +654,10 @@ class VideoCompressorApp:
 
             command = [
                 self.ffmpeg_path,
+                "-hide_banner",
+                "-nostats",
+                "-progress",
+                "pipe:1",
                 "-i",
                 str(input_file),
                 "-c:v",
@@ -578,17 +677,59 @@ class VideoCompressorApp:
 
             self.log_queue.put("正在执行 ffmpeg，请等待...")
 
-            result = subprocess.run(
+            process = subprocess.Popen(
                 command,
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                bufsize=1,
                 creationflags=self.get_creation_flags(),
             )
 
-            if result.returncode == 0:
+            error_lines = []
+            stderr_thread = threading.Thread(
+                target=self.collect_stderr,
+                args=(process, error_lines),
+                daemon=True,
+            )
+            stderr_thread.start()
+
+            try:
+                if process.stdout is not None:
+                    for raw_line in process.stdout:
+                        line = raw_line.strip()
+                        if not line or "=" not in line:
+                            continue
+
+                        key, value = line.split("=", 1)
+                        current_seconds = self.parse_progress_seconds(key, value)
+                        if current_seconds is not None and duration_seconds > 0:
+                            current_file_progress = min(
+                                1.0,
+                                max(0.0, current_seconds / duration_seconds),
+                            )
+                            self.queue_progress(
+                                completed_count,
+                                total_count,
+                                current_file_progress,
+                                current_index,
+                            )
+                        elif key == "progress" and value == "end":
+                            self.queue_progress(
+                                completed_count,
+                                total_count,
+                                1.0,
+                                current_index,
+                            )
+
+                return_code = process.wait()
+            finally:
+                stderr_thread.join(timeout=1)
+
+            if return_code == 0:
                 compressed_size_bytes = output_file.stat().st_size
                 self.log_queue.put("压缩完成！")
                 self.log_queue.put(f"生成文件：{output_file}")
@@ -598,7 +739,7 @@ class VideoCompressorApp:
                     "is_under_one_gb": compressed_size_bytes < ONE_GB_BYTES,
                 }
 
-            error_message = result.stderr.strip() or "未返回具体错误信息。"
+            error_message = "\n".join(error_lines[-12:]).strip() or "未返回具体错误信息。"
             self.log_queue.put("压缩失败。")
             self.log_queue.put("ffmpeg 错误信息：")
             self.log_queue.put(error_message)
@@ -620,12 +761,46 @@ class VideoCompressorApp:
         self.compress_single_video(input_file, output_file)
         self.log_queue.put(TASK_FINISHED_MESSAGE)
 
+    def reset_progress(self, total_count):
+        self.overall_progress_value.set(0)
+        self.current_progress_value.set(0)
+        self.overall_progress_text.set(
+            f"整体进度：第 0 / {total_count} 个，整体百分比 0%"
+        )
+        self.current_progress_text.set("当前视频进度：0%")
+
+    def apply_progress_message(self, message):
+        total_count = int(message.get("total_count") or 0)
+        completed_count = int(message.get("completed_count") or 0)
+        current_index = int(message.get("current_index") or 0)
+        current_file_progress = float(message.get("current_file_progress") or 0)
+        overall_progress = float(message.get("overall_progress") or 0)
+
+        if total_count > 0 and completed_count >= total_count:
+            current_index = total_count
+            current_file_progress = 1.0
+            overall_progress = 1.0
+
+        current_file_progress = min(max(current_file_progress, 0.0), 1.0)
+        overall_progress = min(max(overall_progress, 0.0), 1.0)
+        current_percent = current_file_progress * 100
+        overall_percent = overall_progress * 100
+
+        self.current_progress_value.set(current_percent)
+        self.overall_progress_value.set(overall_percent)
+        self.current_progress_text.set(f"当前视频进度：{current_percent:.0f}%")
+        self.overall_progress_text.set(
+            f"整体进度：第 {current_index} / {total_count} 个，整体百分比 {overall_percent:.0f}%"
+        )
+
     def process_log_queue(self):
         try:
             while True:
                 message = self.log_queue.get_nowait()
 
-                if message == TASK_FINISHED_MESSAGE:
+                if isinstance(message, dict) and message.get("type") == PROGRESS_MESSAGE:
+                    self.apply_progress_message(message)
+                elif message == TASK_FINISHED_MESSAGE:
                     self.is_running = False
                     self.set_buttons_state(tk.NORMAL)
                 elif (

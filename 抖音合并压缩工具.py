@@ -256,6 +256,9 @@ class UnifiedVideoToolApp:
         self.current_process: subprocess.Popen[str] | None = None
         self.cancel_requested = False
         self.compress_started_at = 0.0
+        self.batch_total_count = 0
+        self.batch_completed_count = 0
+        self.batch_current_index = 0
         self.merge_dir = DEFAULT_DOWNLOAD_DIR
         self.input_files: list[Path] = []
         self.output_dir: Path | None = None
@@ -265,8 +268,11 @@ class UnifiedVideoToolApp:
         self.input_file_text = tk.StringVar(value="未选择")
         self.output_dir_text = tk.StringVar(value="未选择")
         self.overwrite_merge = tk.BooleanVar(value=False)
+        self.overall_progress = tk.DoubleVar(value=0.0)
+        self.overall_progress_text = tk.StringVar(value="整体进度：第 0 / 0 个，整体百分比 0%")
         self.compress_progress = tk.DoubleVar(value=0.0)
         self.compress_percent_text = tk.StringVar(value="0%")
+        self.current_video_progress_text = tk.StringVar(value="当前视频进度：0%")
         self.compress_status_text = tk.StringVar(value="准备中")
         self.compress_elapsed_text = tk.StringVar(value="已用时间：00:00:00")
         self.compress_remaining_text = tk.StringVar(value="预计剩余：--:--:--")
@@ -368,11 +374,30 @@ class UnifiedVideoToolApp:
         self.controls.append(start_button)
 
         progress_frame = ttk.Frame(parent)
-        progress_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(14, 0))
+        progress_frame.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(14, 0))
         progress_frame.columnconfigure(0, weight=1)
 
+        ttk.Label(progress_frame, textvariable=self.overall_progress_text).grid(
+            row=0,
+            column=0,
+            sticky="w",
+            pady=(0, 4),
+        )
+        ttk.Progressbar(
+            progress_frame,
+            maximum=100,
+            variable=self.overall_progress,
+            mode="determinate",
+        ).grid(row=1, column=0, sticky="ew", pady=(0, 8))
+
+        ttk.Label(progress_frame, textvariable=self.current_video_progress_text).grid(
+            row=2,
+            column=0,
+            sticky="w",
+            pady=(0, 4),
+        )
         progress_line = ttk.Frame(progress_frame)
-        progress_line.grid(row=0, column=0, sticky="ew")
+        progress_line.grid(row=3, column=0, sticky="ew")
         progress_line.columnconfigure(0, weight=1)
 
         ttk.Progressbar(
@@ -389,16 +414,16 @@ class UnifiedVideoToolApp:
         ).grid(row=0, column=1, sticky="e", padx=(8, 0))
 
         ttk.Label(progress_frame, textvariable=self.compress_status_text).grid(
-            row=1, column=0, sticky="w", pady=(8, 0)
+            row=4, column=0, sticky="w", pady=(8, 0)
         )
         ttk.Label(progress_frame, textvariable=self.compress_elapsed_text).grid(
-            row=2, column=0, sticky="w", pady=(4, 0)
+            row=5, column=0, sticky="w", pady=(4, 0)
         )
         ttk.Label(progress_frame, textvariable=self.compress_remaining_text).grid(
-            row=3, column=0, sticky="w", pady=(4, 0)
+            row=6, column=0, sticky="w", pady=(4, 0)
         )
         ttk.Label(progress_frame, textvariable=self.compress_position_text).grid(
-            row=4, column=0, sticky="w", pady=(4, 0)
+            row=7, column=0, sticky="w", pady=(4, 0)
         )
 
         self.cancel_compress_button = ttk.Button(
@@ -407,7 +432,7 @@ class UnifiedVideoToolApp:
             command=self.cancel_compress,
             state=tk.DISABLED,
         )
-        self.cancel_compress_button.grid(row=5, column=0, sticky="w", pady=(8, 0))
+        self.cancel_compress_button.grid(row=8, column=0, sticky="w", pady=(8, 0))
 
     def build_log_panel(self) -> None:
         log_frame = ttk.Frame(self.root, padding=(12, 0, 12, 12))
@@ -721,7 +746,7 @@ class UnifiedVideoToolApp:
             return
 
         input_files = list(self.input_files)
-        self.reset_compress_progress("准备中")
+        self.reset_compress_progress("准备中", len(input_files))
         self.cancel_requested = False
         self.start_worker(
             self.run_batch_compress,
@@ -755,6 +780,7 @@ class UnifiedVideoToolApp:
         self.log("开始压缩...")
         self.log(f"共选择 {total_count} 个视频。")
         self.log(f"输出目录：{output_dir}")
+        self.post_overall_progress(0, total_count, 0, 0)
 
         for index, input_file in enumerate(input_files, start=1):
             if self.cancel_requested:
@@ -763,11 +789,16 @@ class UnifiedVideoToolApp:
                 break
 
             output_file = self.build_unique_output_path(input_file, output_dir)
+            completed_count = index - 1
+            self.batch_total_count = total_count
+            self.batch_completed_count = completed_count
+            self.batch_current_index = index
             self.log("")
             self.log(f"当前正在压缩第 {index} / {total_count} 个")
             self.log(f"当前输入文件名：{input_file.name}")
             self.log(f"当前输入文件路径：{input_file}")
             self.log(f"当前输出文件路径：{output_file}")
+            self.post_overall_progress(completed_count, total_count, 0, index)
             self.post_compress_progress(
                 status=f"第 {index}/{total_count} 个：准备中",
                 percent=0,
@@ -797,11 +828,13 @@ class UnifiedVideoToolApp:
                 success_count += 1
                 compressed_size = int(result.get("compressed_size", 0))
                 under_one_gb = "是" if compressed_size < ONE_GB_BYTES else "否"
+                self.post_overall_progress(completed_count, total_count, 1.0, index)
                 self.log(f"当前视频压缩完成后的大小：{format_file_size(compressed_size)}")
                 self.log(f"是否小于 1GB：{under_one_gb}")
             else:
                 error_message = str(result.get("error") or "未知错误")
                 failed_items.append((input_file, error_message))
+                self.post_overall_progress(completed_count, total_count, 1.0, index)
                 self.log(f"本视频压缩失败：{short_error_message(error_message)}")
 
         self.log("")
@@ -830,6 +863,7 @@ class UnifiedVideoToolApp:
             percent=100,
             remaining=0,
         )
+        self.post_overall_progress(total_count, total_count, 0, total_count)
         self.post_compress_result("批量压缩完成", "\n".join(summary_lines))
         self.post_open_output_dir(output_dir)
 
@@ -965,6 +999,13 @@ class UnifiedVideoToolApp:
                         current=duration,
                         total=duration,
                     )
+                    if self.batch_total_count > 0:
+                        self.post_overall_progress(
+                            self.batch_completed_count,
+                            self.batch_total_count,
+                            1.0,
+                            self.batch_current_index,
+                        )
 
             return_code = process.wait()
         finally:
@@ -1073,14 +1114,52 @@ class UnifiedVideoToolApp:
             current=current,
             total=total,
         )
+        if self.batch_total_count > 0:
+            self.post_overall_progress(
+                self.batch_completed_count,
+                self.batch_total_count,
+                percent / 100,
+                self.batch_current_index,
+            )
 
-    def reset_compress_progress(self, status: str) -> None:
+    def reset_compress_progress(self, status: str, total_count: int = 0) -> None:
+        self.batch_total_count = total_count
+        self.batch_completed_count = 0
+        self.batch_current_index = 0
+        self.overall_progress.set(0)
+        self.overall_progress_text.set(
+            f"整体进度：第 0 / {total_count} 个，整体百分比 0%"
+        )
         self.compress_progress.set(0)
         self.compress_percent_text.set("0%")
+        self.current_video_progress_text.set("当前视频进度：0%")
         self.compress_status_text.set(status)
         self.compress_elapsed_text.set("已用时间：00:00:00")
         self.compress_remaining_text.set("预计剩余：--:--:--")
         self.compress_position_text.set("进度：00:00:00 / 00:00:00")
+
+    def post_overall_progress(
+        self,
+        completed_count: int,
+        total_count: int,
+        current_file_progress: float,
+        current_index: int,
+    ) -> None:
+        if total_count <= 0:
+            overall_progress = 0.0
+        else:
+            overall_progress = (completed_count + current_file_progress) / total_count
+
+        self.log_queue.put(
+            {
+                "type": "overall_progress",
+                "completed_count": completed_count,
+                "total_count": total_count,
+                "current_file_progress": current_file_progress,
+                "current_index": current_index,
+                "overall_progress": overall_progress,
+            }
+        )
 
     def post_compress_progress(
         self,
@@ -1117,6 +1196,7 @@ class UnifiedVideoToolApp:
             percent = min(max(float(percent), 0.0), 100.0)
             self.compress_progress.set(percent)
             self.compress_percent_text.set(f"{percent:.0f}%")
+            self.current_video_progress_text.set(f"当前视频进度：{percent:.0f}%")
         if elapsed is not None:
             self.compress_elapsed_text.set(f"已用时间：{format_seconds(elapsed)}")
         if remaining is not None:
@@ -1127,6 +1207,31 @@ class UnifiedVideoToolApp:
             self.compress_position_text.set(
                 f"进度：{format_seconds(current)} / {format_seconds(total)}"
             )
+
+    def apply_overall_progress(self, event: dict) -> None:
+        total_count = int(event.get("total_count") or 0)
+        completed_count = int(event.get("completed_count") or 0)
+        current_index = int(event.get("current_index") or 0)
+        current_file_progress = float(event.get("current_file_progress") or 0)
+        overall_progress = float(event.get("overall_progress") or 0)
+
+        if total_count > 0 and completed_count >= total_count:
+            current_index = total_count
+            overall_progress = 1.0
+
+        current_file_progress = min(max(current_file_progress, 0.0), 1.0)
+        overall_progress = min(max(overall_progress, 0.0), 1.0)
+        overall_percent = overall_progress * 100
+
+        if total_count > 0 and current_index == 0 and completed_count == 0:
+            display_index = 0
+        else:
+            display_index = min(max(current_index, 0), total_count)
+
+        self.overall_progress.set(overall_percent)
+        self.overall_progress_text.set(
+            f"整体进度：第 {display_index} / {total_count} 个，整体百分比 {overall_percent:.0f}%"
+        )
 
     def post_compress_result(
         self,
@@ -1381,6 +1486,8 @@ class UnifiedVideoToolApp:
                     message_type = message.get("type")
                     if message_type == "compress_progress":
                         self.apply_compress_progress(message)
+                    elif message_type == "overall_progress":
+                        self.apply_overall_progress(message)
                     elif message_type == "compress_result":
                         self.show_compress_result(message)
                     elif message_type == "open_output_dir":
