@@ -38,36 +38,38 @@ function formatAxisNumber(value) {
   });
 }
 
-function drawSmoothPath(ctx, points) {
+function drawTrendPath(ctx, points, smoothness = 0.18) {
   if (!points.length) return;
 
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
 
-  for (let index = 0; index < points.length - 1; index += 1) {
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
     const current = points[index];
-    const next = points[index + 1];
-    const midX = (current.x + next.x) / 2;
-    ctx.bezierCurveTo(midX, current.y, midX, next.y, next.x, next.y);
+    const offset = (current.x - previous.x) * smoothness;
+    ctx.bezierCurveTo(previous.x + offset, previous.y, current.x - offset, current.y, current.x, current.y);
   }
 }
 
-function drawSeries(ctx, points, color, fillColor, plotBottom) {
+function drawSeries(ctx, points, style, plotBottom) {
   if (!points.length) return;
 
+  const { color, fillColor, lineWidth, shadowColor, shadowBlur, smoothness } = style;
+
   ctx.save();
-  drawSmoothPath(ctx, points);
+  drawTrendPath(ctx, points, smoothness);
   ctx.lineTo(points.at(-1).x, plotBottom);
   ctx.lineTo(points[0].x, plotBottom);
   ctx.closePath();
   ctx.fillStyle = fillColor;
   ctx.fill();
 
-  drawSmoothPath(ctx, points);
+  drawTrendPath(ctx, points, smoothness);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2.2;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
+  ctx.lineWidth = lineWidth;
+  ctx.shadowColor = shadowColor;
+  ctx.shadowBlur = shadowBlur;
   ctx.stroke();
   ctx.restore();
 }
@@ -238,8 +240,32 @@ export function drawQianchuanTrendChart(canvas, data, options = {}) {
 
   const netPoints = trendData.map((item, index) => ({ x: plotX(index), y: netY(item.netGmv) }));
   const costPoints = trendData.map((item, index) => ({ x: plotX(index), y: costY(item.cost) }));
-  drawSeries(ctx, netPoints, "#2f73ff", "rgba(47, 115, 255, 0.18)", plotBottom);
-  drawSeries(ctx, costPoints, "#10d3e3", "rgba(16, 211, 227, 0.17)", plotBottom);
+  drawSeries(
+    ctx,
+    costPoints,
+    {
+      color: "#16d5e4",
+      fillColor: "rgba(16, 211, 227, 0.035)",
+      lineWidth: 1.8,
+      shadowColor: "rgba(16, 211, 227, 0.16)",
+      shadowBlur: 3,
+      smoothness: 0.2,
+    },
+    plotBottom,
+  );
+  drawSeries(
+    ctx,
+    netPoints,
+    {
+      color: "#3478ff",
+      fillColor: "rgba(47, 115, 255, 0.055)",
+      lineWidth: 2.35,
+      shadowColor: "rgba(47, 115, 255, 0.24)",
+      shadowBlur: 5,
+      smoothness: 0.12,
+    },
+    plotBottom,
+  );
 
   drawSelectedState(ctx, trendData[activeIndex], plotX(activeIndex), width, pad.top, plotBottom);
   drawEventTimeline(ctx, trendData, data.trendConfig, plotX, width, height, activeIndex);
