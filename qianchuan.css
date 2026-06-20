@@ -279,11 +279,12 @@ body.qianchuan-page #app {
 
 .qc-metrics-card {
   display: grid;
-  grid-template-rows: 1fr 1fr;
-  padding: 24px 130px 22px 70px;
+  grid-template-rows: 0.95fr 1.05fr;
+  row-gap: 6px;
+  padding: 20px 122px 18px 62px;
   background:
-    radial-gradient(circle at 10% 82%, rgba(2, 107, 93, 0.44), transparent 17rem),
-    radial-gradient(circle at 50% 22%, rgba(28, 102, 240, 0.74), transparent 24rem),
+    radial-gradient(circle at 10% 82%, rgba(2, 107, 93, 0.3), transparent 17rem),
+    radial-gradient(circle at 50% 22%, rgba(28, 102, 240, 0.54), transparent 24rem),
     linear-gradient(115deg, #06386d 0%, #06246a 46%, #071a4a 100%);
 }
 
@@ -337,13 +338,13 @@ body.qianchuan-page #app {
 
 .qc-primary-metrics {
   grid-template-columns: repeat(3, minmax(160px, 1fr));
-  width: min(640px, 58vw);
+  width: min(610px, 56vw);
   justify-self: center;
 }
 
 .qc-secondary-metrics {
   grid-template-columns: repeat(5, minmax(120px, 1fr));
-  gap: 26px;
+  gap: 18px;
 }
 
 .qc-metric {
@@ -353,25 +354,25 @@ body.qianchuan-page #app {
 
 .qc-metric span {
   display: inline-block;
-  color: rgba(215, 227, 255, 0.78);
-  border-bottom: 1px dashed rgba(226, 236, 255, 0.52);
-  font-size: 15px;
+  color: rgba(194, 207, 238, 0.68);
+  border-bottom: 1px dashed rgba(198, 214, 249, 0.32);
+  font-size: 13px;
   line-height: 1.2;
 }
 
 .qc-metric strong {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: #fff;
-  font-size: 28px;
-  line-height: 1.08;
-  font-weight: 900;
+  font-size: 24px;
+  line-height: 1.06;
+  font-weight: 800;
   letter-spacing: 0;
-  text-shadow: 0 4px 16px rgba(17, 55, 168, 0.44);
+  text-shadow: 0 2px 10px rgba(17, 55, 168, 0.28);
 }
 
 .qc-metric-primary strong {
-  font-size: 44px;
+  font-size: 38px;
 }
 
 .qc-trend-card {
