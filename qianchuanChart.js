@@ -1,8 +1,14 @@
+const TREND_PAD = {
+  top: 58,
+  right: 88,
+  bottom: 168,
+  left: 86,
+};
+
 function getCanvasContext(canvas) {
-  const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  const width = Math.max(1, Math.round(rect.width));
-  const height = Math.max(1, Math.round(rect.height));
+  const width = Math.max(1, Math.round(canvas.clientWidth || canvas.getBoundingClientRect().width));
+  const height = Math.max(1, Math.round(canvas.clientHeight || canvas.getBoundingClientRect().height));
 
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -66,13 +72,15 @@ function drawSeries(ctx, points, color, fillColor, plotBottom) {
   ctx.restore();
 }
 
-function drawEventTimeline(ctx, trendData, config, plotX, width, height) {
+function drawEventTimeline(ctx, trendData, config, plotX, width, height, activeIndex) {
+  // TODO：后续完善底部时间线拖拽交互。
   const rows = config.eventRows || [];
-  const timelineTop = height - 72;
+  const timelineTop = height - 96;
   const labelX = 28;
   const gridLeft = 108;
   const gridRight = width - 74;
   const rowHeight = 26;
+  const activeX = plotX(activeIndex);
   const colors = {
     投放动作: "#ffb31a",
     调控动作: "#2dd28f",
@@ -106,31 +114,71 @@ function drawEventTimeline(ctx, trendData, config, plotX, width, height) {
 
   ctx.setLineDash([]);
   ctx.fillStyle = "rgba(113, 129, 178, 0.64)";
-  ctx.fillRect(gridLeft, height - 36, gridRight - gridLeft, 10);
+  ctx.fillRect(gridLeft, height - 34, gridRight - gridLeft, 10);
   ctx.fillStyle = "rgba(89, 125, 230, 0.56)";
-  ctx.fillRect(gridLeft, height - 38, gridRight - gridLeft, 3);
+  ctx.fillRect(gridLeft, height - 36, gridRight - gridLeft, 3);
   ctx.fillStyle = "#7aa1ff";
-  ctx.fillRect(gridLeft - 3, height - 40, 6, 18);
-  ctx.fillRect(gridRight - 3, height - 40, 6, 18);
+  ctx.fillRect(gridLeft - 3, height - 38, 6, 18);
+  ctx.fillRect(gridRight - 3, height - 38, 6, 18);
+  ctx.fillStyle = "#c4d4ff";
+  ctx.fillRect(activeX - 4, height - 42, 8, 24);
+  ctx.strokeStyle = "rgba(222, 234, 255, 0.9)";
+  ctx.strokeRect(activeX - 4, height - 42, 8, 24);
 
   ctx.fillStyle = "rgba(239, 245, 255, 0.94)";
   ctx.fillText(config.newControlLabel || "", gridRight + 10, timelineTop + rowHeight);
   ctx.restore();
 }
 
-export function drawQianchuanTrendChart(canvas, data) {
+function drawSelectedState(ctx, activePoint, activeX, width, plotTop, plotBottom) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(143, 166, 230, 0.46)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(activeX, plotTop);
+  ctx.lineTo(activeX, plotBottom + 102);
+  ctx.stroke();
+
+  const tooltipWidth = 170;
+  const tooltipHeight = 78;
+  const tooltipX = Math.min(width - tooltipWidth - 22, Math.max(TREND_PAD.left + 10, activeX + 14));
+  const tooltipY = Math.max(plotTop + 8, plotTop + 22);
+
+  ctx.fillStyle = "rgba(8, 13, 27, 0.9)";
+  ctx.beginPath();
+  if (typeof ctx.roundRect === "function") {
+    ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 8);
+  } else {
+    ctx.rect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+  }
+  ctx.fill();
+
+  ctx.fillStyle = "#eaf2ff";
+  ctx.font = "700 13px Microsoft YaHei, Arial, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText(activePoint.time || "-", tooltipX + 12, tooltipY + 20);
+
+  ctx.font = "12px Microsoft YaHei, Arial, sans-serif";
+  ctx.fillStyle = "#2f73ff";
+  ctx.fillText("●", tooltipX + 12, tooltipY + 44);
+  ctx.fillStyle = "#dbe7ff";
+  ctx.fillText(`净成交金额 ${formatAxisNumber(activePoint.netGmv)}`, tooltipX + 28, tooltipY + 44);
+  ctx.fillStyle = "#10d3e3";
+  ctx.fillText("●", tooltipX + 12, tooltipY + 64);
+  ctx.fillStyle = "#dbe7ff";
+  ctx.fillText(`消耗 ${formatAxisNumber(activePoint.cost)}`, tooltipX + 28, tooltipY + 64);
+  ctx.restore();
+}
+
+export function drawQianchuanTrendChart(canvas, data, options = {}) {
   if (!canvas) return;
 
   const { ctx, width, height } = getCanvasContext(canvas);
   const trendData = data.trendData || [];
   if (!trendData.length) return;
 
-  const pad = {
-    top: 64,
-    right: 88,
-    bottom: 132,
-    left: 86,
-  };
+  const activeIndex = Math.max(0, Math.min(trendData.length - 1, Number(options.activeIndex) || 0));
+  const pad = TREND_PAD;
   const plotWidth = Math.max(1, width - pad.left - pad.right);
   const plotHeight = Math.max(1, height - pad.top - pad.bottom);
   const plotBottom = pad.top + plotHeight;
@@ -193,7 +241,8 @@ export function drawQianchuanTrendChart(canvas, data) {
   drawSeries(ctx, netPoints, "#2f73ff", "rgba(47, 115, 255, 0.18)", plotBottom);
   drawSeries(ctx, costPoints, "#10d3e3", "rgba(16, 211, 227, 0.17)", plotBottom);
 
-  drawEventTimeline(ctx, trendData, data.trendConfig, plotX, width, height);
+  drawSelectedState(ctx, trendData[activeIndex], plotX(activeIndex), width, pad.top, plotBottom);
+  drawEventTimeline(ctx, trendData, data.trendConfig, plotX, width, height, activeIndex);
 }
 
 export function drawChannelDonut(canvas, channels, centerLabel) {

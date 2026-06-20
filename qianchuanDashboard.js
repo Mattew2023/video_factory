@@ -2,6 +2,14 @@ import { formatNumber, formatPercent } from "./formulas.js";
 import { drawChannelDonut, drawQianchuanTrendChart } from "./qianchuanChart.js";
 import { qianchuanData } from "./qianchuanData.js";
 
+const DESIGN_WIDTH = 1920;
+const DESIGN_HEIGHT = 1080;
+
+const qianchuanState = {
+  activeTrendIndex: 0,
+  draggingTrend: false,
+};
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -103,6 +111,7 @@ function renderTrendPanel(data) {
       <div class="qc-trend-tools">
         <div class="qc-legends">${toggles}</div>
         <div class="qc-tool-actions">
+          <span class="qc-selected-time">已选 <b id="qianchuanSelectedTime"></b></span>
           <button class="qc-granularity" type="button">${escapeHtml(data.trendConfig.granularityLabel)}</button>
           <button class="qc-filter-btn" type="button" aria-label="${escapeHtml(data.trendConfig.filterLabel)}">⌯</button>
         </div>
@@ -200,56 +209,131 @@ function renderTemplate(data) {
     .join("");
 
   return `
-    <div class="qianchuan-shell">
-      <header class="qc-topbar">
-        <div class="qc-brand">${brands}</div>
-        <div class="qc-live-info">
-          <span class="qc-avatar" aria-hidden="true"></span>
-          <strong>${escapeHtml(data.basicInfo.shopName)}</strong>
-          <em>${escapeHtml(data.basicInfo.liveStatus)} | ${escapeHtml(data.basicInfo.liveDuration)}</em>
-          <span class="qc-separator"></span>
-          <span>开播时间：${escapeHtml(data.basicInfo.startTime)}</span>
-          <span class="qc-separator"></span>
-          <button type="button">${escapeHtml(data.basicInfo.dataStatus)}</button>
-          <button class="qc-top-action" type="button">⟳ ${escapeHtml(data.basicInfo.refreshLabel)}</button>
-          <button class="qc-top-action" type="button">⛶ ${escapeHtml(data.basicInfo.fullscreenLabel)}</button>
-        </div>
-      </header>
+    <div class="qianchuan-viewport">
+      <div class="qianchuan-stage">
+        <div class="qianchuan-shell">
+          <header class="qc-topbar">
+            <div class="qc-brand">${brands}</div>
+            <div class="qc-live-info">
+              <span class="qc-avatar" aria-hidden="true"></span>
+              <strong>${escapeHtml(data.basicInfo.shopName)}</strong>
+              <em>${escapeHtml(data.basicInfo.liveStatus)} | ${escapeHtml(data.basicInfo.liveDuration)}</em>
+              <span class="qc-separator"></span>
+              <span>开播时间：${escapeHtml(data.basicInfo.startTime)}</span>
+              <span class="qc-separator"></span>
+              <button type="button">${escapeHtml(data.basicInfo.dataStatus)}</button>
+              <button class="qc-top-action" type="button">⟳ ${escapeHtml(data.basicInfo.refreshLabel)}</button>
+              <button class="qc-top-action" type="button">⛶ ${escapeHtml(data.basicInfo.fullscreenLabel)}</button>
+            </div>
+          </header>
 
-      <div class="qc-announcement">
-        <span>${escapeHtml(data.basicInfo.announcement.badge)}</span>
-        <p>${escapeHtml(data.basicInfo.announcement.text)}</p>
-        ${announcementActions}
-        <i>${escapeHtml(data.basicInfo.announcement.pageText)}</i>
-        <button class="qc-announcement-close" type="button" aria-label="关闭公告">×</button>
+          <div class="qc-announcement">
+            <span>${escapeHtml(data.basicInfo.announcement.badge)}</span>
+            <p>${escapeHtml(data.basicInfo.announcement.text)}</p>
+            ${announcementActions}
+            <i>${escapeHtml(data.basicInfo.announcement.pageText)}</i>
+            <button class="qc-announcement-close" type="button" aria-label="关闭公告">×</button>
+          </div>
+
+          <main class="qc-board">
+            <div class="qc-main-column">
+              ${renderTopMetrics(data)}
+              ${renderTrendPanel(data)}
+            </div>
+            <aside class="qc-side-column">
+              ${renderChannelCard(data)}
+              ${renderFunnelCard(data)}
+              ${renderCommentsCard(data)}
+            </aside>
+          </main>
+        </div>
       </div>
-
-      <main class="qc-board">
-        <div class="qc-main-column">
-          ${renderTopMetrics(data)}
-          ${renderTrendPanel(data)}
-        </div>
-        <aside class="qc-side-column">
-          ${renderChannelCard(data)}
-          ${renderFunnelCard(data)}
-          ${renderCommentsCard(data)}
-        </aside>
-      </main>
     </div>
   `;
 }
 
 function drawCharts(data) {
-  drawQianchuanTrendChart(document.getElementById("qianchuanTrendCanvas"), data);
+  drawQianchuanTrendChart(document.getElementById("qianchuanTrendCanvas"), data, {
+    activeIndex: qianchuanState.activeTrendIndex,
+  });
   drawChannelDonut(document.getElementById("qianchuanChannelCanvas"), data.channelComposition, data.sections.channel.centerLabel);
+}
+
+function updateSelectedTime(data) {
+  const timeElement = document.getElementById("qianchuanSelectedTime");
+  const activePoint = data.trendData[qianchuanState.activeTrendIndex];
+  if (timeElement) timeElement.textContent = activePoint?.time || "-";
+}
+
+function applyStageScale() {
+  const stage = document.querySelector(".qianchuan-stage");
+  if (!stage) return;
+
+  const scale = Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT);
+  stage.style.transform = `scale(${scale})`;
+}
+
+function updateTrendSelection(event, data) {
+  const canvas = document.getElementById("qianchuanTrendCanvas");
+  if (!canvas || !data.trendData.length) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const layoutWidth = canvas.clientWidth || rect.width;
+  const x = ((event.clientX - rect.left) * layoutWidth) / Math.max(1, rect.width);
+  const left = 86;
+  const right = 88;
+  const ratio = Math.min(1, Math.max(0, (x - left) / Math.max(1, layoutWidth - left - right)));
+  qianchuanState.activeTrendIndex = Math.round(ratio * (data.trendData.length - 1));
+  updateSelectedTime(data);
+  drawCharts(data);
+}
+
+function bindTrendDrag(data) {
+  // TODO：后续完善底部时间线拖拽交互。
+  const canvas = document.getElementById("qianchuanTrendCanvas");
+  if (!canvas) return;
+
+  canvas.addEventListener("pointerdown", (event) => {
+    qianchuanState.draggingTrend = true;
+    canvas.setPointerCapture?.(event.pointerId);
+    updateTrendSelection(event, data);
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    if (!qianchuanState.draggingTrend) return;
+    updateTrendSelection(event, data);
+  });
+
+  const stopDragging = (event) => {
+    if (!qianchuanState.draggingTrend) return;
+    qianchuanState.draggingTrend = false;
+    canvas.releasePointerCapture?.(event.pointerId);
+  };
+
+  canvas.addEventListener("pointerup", stopDragging);
+  canvas.addEventListener("pointercancel", stopDragging);
 }
 
 export function renderQianchuanDashboard(root) {
   const stylesheetReady = ensureQianchuanStylesheet();
   document.body.className = "qianchuan-page";
   document.title = "巨量千川直播大屏";
+  qianchuanState.activeTrendIndex = Math.floor((qianchuanData.trendData.length - 1) * 0.72);
   root.innerHTML = renderTemplate(qianchuanData);
+  updateSelectedTime(qianchuanData);
 
-  stylesheetReady.then(() => requestAnimationFrame(() => drawCharts(qianchuanData)));
-  window.addEventListener("resize", () => drawCharts(qianchuanData), { passive: true });
+  stylesheetReady.then(() =>
+    requestAnimationFrame(() => {
+      applyStageScale();
+      drawCharts(qianchuanData);
+    }),
+  );
+  window.addEventListener(
+    "resize",
+    () => {
+      applyStageScale();
+      drawCharts(qianchuanData);
+    },
+    { passive: true },
+  );
 }
