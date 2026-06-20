@@ -560,6 +560,13 @@ async function renderRoute() {
   const root = document.getElementById("app");
   if (!root) return;
 
+  if (window.location.pathname === "/qianchuan-dashboard") {
+    if (state.refreshTimer) window.clearInterval(state.refreshTimer);
+    const { renderQianchuanDashboard } = await import("./qianchuanDashboard.js");
+    renderQianchuanDashboard(root);
+    return;
+  }
+
   if (window.location.pathname === "/admin") {
     if (state.refreshTimer) window.clearInterval(state.refreshTimer);
     const { renderAdmin } = await import("./admin.js");

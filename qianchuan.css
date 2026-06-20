@@ -1,0 +1,680 @@
+body.qianchuan-page {
+  min-width: 1440px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% -18%, rgba(171, 31, 63, 0.28), transparent 24rem),
+    radial-gradient(circle at 62% -22%, rgba(42, 159, 142, 0.2), transparent 30rem),
+    radial-gradient(circle at 86% -10%, rgba(37, 107, 221, 0.36), transparent 26rem),
+    #030615;
+  color: #eef4ff;
+}
+
+body.qianchuan-page #app {
+  width: 100vw;
+  height: 100vh;
+}
+
+.qianchuan-shell {
+  --qc-panel: rgba(23, 33, 68, 0.96);
+  --qc-panel-soft: rgba(25, 37, 77, 0.92);
+  --qc-line: rgba(133, 160, 231, 0.2);
+  --qc-text: #eef4ff;
+  --qc-muted: #aab9dd;
+  --qc-blue: #286bff;
+  --qc-cyan: #0ed3e4;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(10, 12, 28, 0.32), rgba(3, 6, 18, 0.74)),
+    radial-gradient(circle at 50% -14%, rgba(58, 110, 220, 0.24), transparent 30rem);
+}
+
+.qianchuan-shell button {
+  font: inherit;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.qc-topbar {
+  height: 78px;
+  display: grid;
+  grid-template-columns: max-content minmax(820px, 1fr);
+  align-items: center;
+  gap: 22px;
+  padding: 0 22px;
+  background: linear-gradient(90deg, rgba(2, 5, 17, 0.88), rgba(9, 14, 31, 0.72));
+}
+
+.qc-brand,
+.qc-brand-item,
+.qc-live-info,
+.qc-announcement,
+.qc-card-title,
+.qc-tabs,
+.qc-trend-header,
+.qc-trend-tools,
+.qc-legends,
+.qc-tool-actions,
+.qc-channel-layout,
+.qc-funnel-bar,
+.qc-comment-list li div {
+  display: flex;
+  align-items: center;
+}
+
+.qc-brand {
+  gap: 14px;
+}
+
+.qc-brand-item {
+  gap: 9px;
+}
+
+.qc-brand-item strong {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.qc-brand-divider {
+  width: 1px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.qc-brand-mark {
+  flex: 0 0 auto;
+  position: relative;
+  display: inline-block;
+}
+
+.qc-brand-mark-douyin {
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #15efff 8%, #fff 45%, #ff2d67 78%);
+}
+
+.qc-brand-mark-douyin::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 5px;
+  width: 8px;
+  height: 15px;
+  border-right: 4px solid #050819;
+  border-bottom: 4px solid #050819;
+  border-radius: 0 0 9px 0;
+}
+
+.qc-brand-mark-qianchuan {
+  width: 32px;
+  height: 30px;
+  background:
+    linear-gradient(135deg, transparent 0 18%, #fff 19% 36%, transparent 37%),
+    linear-gradient(135deg, transparent 22%, #fff 23% 48%, transparent 49%),
+    linear-gradient(135deg, transparent 40%, #fff 41% 68%, transparent 69%);
+}
+
+.qc-live-info {
+  min-width: 0;
+  justify-content: flex-end;
+  gap: 12px;
+  color: #b6c5e4;
+  white-space: nowrap;
+}
+
+.qc-live-info strong {
+  max-width: 180px;
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+}
+
+.qc-live-info em {
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: #ff4d57;
+  color: #fff;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.qc-live-info button {
+  background: transparent;
+  color: #d7e1fb;
+}
+
+.qc-top-action {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: rgba(72, 82, 121, 0.56) !important;
+  box-shadow: inset 0 0 0 1px rgba(190, 205, 255, 0.18);
+}
+
+.qc-avatar {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 35%, #ffe3bf 0 24%, transparent 25%),
+    radial-gradient(circle at 52% 60%, #ff697b 0 20%, transparent 21%),
+    conic-gradient(from 20deg, #20d5df, #ffe05c, #ff5474, #705bff, #20d5df);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.qc-separator {
+  width: 1px;
+  height: 18px;
+  background: rgba(206, 220, 255, 0.34);
+}
+
+.qc-announcement {
+  height: 32px;
+  margin: 0 22px;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: 18px;
+  background: rgba(93, 99, 125, 0.78);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(204, 214, 246, 0.1);
+}
+
+.qc-announcement span {
+  height: 18px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #366dff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+}
+
+.qc-announcement p {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-announcement button {
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+}
+
+.qc-announcement i {
+  color: #ecf2ff;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.qc-announcement .qc-announcement-close {
+  width: 20px;
+  padding: 0;
+  background: transparent;
+  color: #d9e2f6;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.qc-board {
+  height: calc(100vh - 110px);
+  display: grid;
+  grid-template-columns: minmax(900px, 1fr) 346px;
+  gap: 14px;
+  padding: 16px 22px 18px;
+}
+
+.qc-main-column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 210px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.qc-side-column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 207px 210px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.qc-metrics-card,
+.qc-trend-card,
+.qc-side-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--qc-line);
+  border-radius: 26px;
+  background: var(--qc-panel);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28), inset 0 0 24px rgba(56, 110, 240, 0.08);
+}
+
+.qc-metrics-card {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  padding: 24px 130px 22px 70px;
+  background:
+    radial-gradient(circle at 10% 82%, rgba(2, 107, 93, 0.44), transparent 17rem),
+    radial-gradient(circle at 50% 22%, rgba(28, 102, 240, 0.74), transparent 24rem),
+    linear-gradient(115deg, #06386d 0%, #06246a 46%, #071a4a 100%);
+}
+
+.qc-metrics-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 74% 22%, rgba(86, 128, 255, 0.2), transparent 15rem),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  pointer-events: none;
+}
+
+.qc-metrics-actions {
+  position: absolute;
+  top: 18px;
+  right: 28px;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+}
+
+.qc-select-btn,
+.qc-granularity {
+  height: 30px;
+  padding: 0 16px;
+  border-radius: 17px;
+  background: rgba(54, 80, 139, 0.72);
+  color: #e8f0ff;
+  box-shadow: inset 0 0 0 1px rgba(218, 229, 255, 0.22);
+}
+
+.qc-icon-btn,
+.qc-filter-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(71, 91, 143, 0.72);
+  color: #dbe7ff;
+  box-shadow: inset 0 0 0 1px rgba(218, 229, 255, 0.16);
+}
+
+.qc-primary-metrics,
+.qc-secondary-metrics {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-items: center;
+}
+
+.qc-primary-metrics {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  width: min(640px, 58vw);
+  justify-self: center;
+}
+
+.qc-secondary-metrics {
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 26px;
+}
+
+.qc-metric {
+  min-width: 0;
+  text-align: center;
+}
+
+.qc-metric span {
+  display: inline-block;
+  color: rgba(215, 227, 255, 0.78);
+  border-bottom: 1px dashed rgba(226, 236, 255, 0.52);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.qc-metric strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 28px;
+  line-height: 1.08;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-shadow: 0 4px 16px rgba(17, 55, 168, 0.44);
+}
+
+.qc-metric-primary strong {
+  font-size: 44px;
+}
+
+.qc-trend-card {
+  display: grid;
+  grid-template-rows: 54px 42px minmax(0, 1fr);
+  padding: 24px 28px 18px;
+  border-radius: 26px;
+  background: rgba(24, 34, 69, 0.98);
+}
+
+.qc-trend-header {
+  justify-content: space-between;
+}
+
+.qc-tabs {
+  gap: 14px;
+}
+
+.qc-tab {
+  height: 30px;
+  padding: 0 17px;
+  border-radius: 17px;
+  background: rgba(78, 91, 132, 0.72);
+  color: #d9e4ff;
+  font-weight: 700;
+}
+
+.qc-tab.active {
+  background: #fff;
+  color: #3c4964;
+}
+
+.qc-expand-btn {
+  margin-left: auto;
+}
+
+.qc-trend-tools {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qc-legends {
+  min-width: 0;
+  gap: 18px;
+  overflow: hidden;
+}
+
+.qc-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  background: transparent;
+  color: #8190b4;
+  white-space: nowrap;
+}
+
+.qc-legend span {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--legend-color);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.qc-legend.active {
+  color: #eaf1ff;
+  font-weight: 700;
+}
+
+.qc-tool-actions {
+  gap: 12px;
+}
+
+.qc-filter-btn {
+  font-size: 18px;
+}
+
+.qc-trend-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qc-side-card {
+  padding: 22px;
+  background: rgba(24, 34, 70, 0.97);
+}
+
+.qc-card-title {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.qc-card-title h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.qc-card-title button {
+  min-width: 88px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: rgba(83, 96, 139, 0.72);
+  color: #e3ebff;
+  font-size: 13px;
+}
+
+.qc-channel-layout {
+  gap: 18px;
+}
+
+.qc-channel-canvas {
+  width: 126px;
+  height: 126px;
+  flex: 0 0 auto;
+}
+
+.qc-channel-list {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qc-channel-list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #d7e2ff;
+  font-size: 12px;
+}
+
+.qc-channel-list li span:nth-child(2) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-channel-list strong {
+  color: #fff;
+}
+
+.qc-channel-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--channel-color);
+}
+
+.qc-funnel-list {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qc-funnel-row {
+  position: relative;
+  min-height: 26px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 9px;
+}
+
+.qc-funnel-bar {
+  width: calc(100% * var(--funnel-scale));
+  min-width: 122px;
+  max-width: 100%;
+  height: 26px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 10px 0 13px;
+  border-radius: 4px 14px 14px 4px;
+  background: linear-gradient(90deg, #1d64ff, #315dfa);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qc-funnel-bar span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-funnel-bar strong {
+  flex: 0 0 auto;
+}
+
+.qc-funnel-row em {
+  position: relative;
+  color: #dce7ff;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.qc-funnel-row em::before {
+  content: "";
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  width: 29px;
+  height: 1px;
+  background: #335cdd;
+}
+
+.qc-comments-card {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.qc-comment-list {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  margin: 0;
+  padding: 2px 0 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.qc-comment-list li {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(44, 60, 105, 0.58);
+}
+
+.qc-comment-list li div {
+  gap: 8px;
+  min-width: 0;
+}
+
+.qc-comment-list strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #18c4d8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.qc-comment-list time {
+  color: #8799c2;
+  font-size: 11px;
+}
+
+.qc-comment-list span {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: rgba(47, 115, 255, 0.22);
+  color: #aecaef;
+  font-size: 11px;
+}
+
+.qc-comment-list p {
+  margin: 0;
+  color: #e6efff;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1500px) {
+  body.qianchuan-page {
+    min-width: 1180px;
+    overflow: auto;
+  }
+
+  body.qianchuan-page #app,
+  .qianchuan-shell {
+    min-height: 900px;
+  }
+
+  .qc-topbar {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 98px;
+    gap: 10px;
+    padding: 14px 18px;
+  }
+
+  .qc-live-info {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .qc-board {
+    height: auto;
+    min-height: calc(100vh - 130px);
+    grid-template-columns: 1fr;
+  }
+
+  .qc-main-column {
+    min-height: 760px;
+  }
+
+  .qc-side-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: 240px;
+  }
+}
