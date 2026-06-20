@@ -209,7 +209,7 @@ function renderCommentsCard(data) {
 function renderTemplate(data) {
   const brands = data.basicInfo.brands.map(renderBrand).join('<span class="qc-brand-divider"></span>');
   const announcementActions = data.basicInfo.announcement.actions
-    .map((action) => `<button type="button">${escapeHtml(action)}</button>`)
+    .map((action) => `<button class="qc-announcement-action" type="button">${escapeHtml(action)}</button>`)
     .join("");
 
   return `
@@ -220,22 +220,22 @@ function renderTemplate(data) {
             <div class="qc-brand">${brands}</div>
             <div class="qc-live-info">
               <span class="qc-avatar" aria-hidden="true"></span>
-              <strong>${escapeHtml(data.basicInfo.shopName)}</strong>
-              <em>${escapeHtml(data.basicInfo.liveStatus)} | ${escapeHtml(data.basicInfo.liveDuration)}</em>
+              <strong class="qc-shop-name">${escapeHtml(data.basicInfo.shopName)}</strong>
+              <em class="qc-live-status">${escapeHtml(data.basicInfo.liveStatus)} | ${escapeHtml(data.basicInfo.liveDuration)}</em>
               <span class="qc-separator"></span>
-              <span>开播时间：${escapeHtml(data.basicInfo.startTime)}</span>
+              <span class="qc-start-time">开播时间：${escapeHtml(data.basicInfo.startTime)}</span>
               <span class="qc-separator"></span>
-              <button type="button">${escapeHtml(data.basicInfo.dataStatus)}</button>
+              <button class="qc-data-note" type="button">${escapeHtml(data.basicInfo.dataStatus)}</button>
               <button class="qc-top-action" type="button">⟳ ${escapeHtml(data.basicInfo.refreshLabel)}</button>
               <button class="qc-top-action" type="button">⛶ ${escapeHtml(data.basicInfo.fullscreenLabel)}</button>
             </div>
           </header>
 
           <div class="qc-announcement">
-            <span>${escapeHtml(data.basicInfo.announcement.badge)}</span>
-            <p>${escapeHtml(data.basicInfo.announcement.text)}</p>
+            <span class="qc-announcement-badge">${escapeHtml(data.basicInfo.announcement.badge)}</span>
+            <p class="qc-announcement-text">${escapeHtml(data.basicInfo.announcement.text)}</p>
             ${announcementActions}
-            <i>${escapeHtml(data.basicInfo.announcement.pageText)}</i>
+            <i class="qc-announcement-page">${escapeHtml(data.basicInfo.announcement.pageText)}</i>
             <button class="qc-announcement-close" type="button" aria-label="关闭公告">×</button>
           </div>
 
