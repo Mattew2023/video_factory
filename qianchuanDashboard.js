@@ -125,10 +125,10 @@ function renderChannelCard(data) {
   const channels = data.channelComposition
     .map(
       (item) => `
-        <li>
+        <li class="qc-channel-item">
           <span class="qc-channel-dot" style="--channel-color:${escapeHtml(item.color)}"></span>
-          <span>${escapeHtml(item.channelName)}</span>
-          <strong>${escapeHtml(formatPercent(item.percent))}</strong>
+          <span class="qc-channel-name">${escapeHtml(item.channelName)}</span>
+          <strong class="qc-channel-percent">${escapeHtml(formatPercent(item.percent))}</strong>
         </li>
       `,
     )

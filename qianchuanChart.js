@@ -278,15 +278,26 @@ export function drawChannelDonut(canvas, channels, centerLabel) {
   const total = channels.reduce((sum, item) => sum + toNumber(item.percent), 0) || 1;
   const centerX = width / 2;
   const centerY = height / 2;
-  const radius = Math.min(width, height) * 0.42;
-  const innerRadius = radius * 0.56;
+  const radius = Math.min(width, height) * 0.41;
+  const innerRadius = radius * 0.64;
+  const gap = 0.014;
   let start = -Math.PI / 2;
+
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, innerRadius, Math.PI * 2, 0, true);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(42, 57, 100, 0.78)";
+  ctx.fill();
 
   channels.forEach((item) => {
     const angle = (toNumber(item.percent) / total) * Math.PI * 2;
+    const segmentStart = start + gap;
+    const segmentEnd = start + angle - gap;
+
     ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, start, start + angle);
+    ctx.arc(centerX, centerY, radius, segmentStart, segmentEnd);
+    ctx.arc(centerX, centerY, innerRadius, segmentEnd, segmentStart, true);
     ctx.closePath();
     ctx.fillStyle = item.color || "#7ea2ff";
     ctx.fill();
@@ -295,12 +306,12 @@ export function drawChannelDonut(canvas, channels, centerLabel) {
 
   ctx.beginPath();
   ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-  ctx.fillStyle = "#142040";
+  ctx.fillStyle = "rgba(20, 32, 64, 0.98)";
   ctx.fill();
 
   ctx.save();
-  ctx.fillStyle = "#dbe7ff";
-  ctx.font = "700 12px Microsoft YaHei, Arial, sans-serif";
+  ctx.fillStyle = "rgba(219, 231, 255, 0.88)";
+  ctx.font = "700 11px Microsoft YaHei, Arial, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(centerLabel || "", centerX, centerY);

@@ -508,12 +508,12 @@ body.qianchuan-page #app {
 }
 
 .qc-channel-layout {
-  gap: 18px;
+  gap: 14px;
 }
 
 .qc-channel-canvas {
-  width: 126px;
-  height: 126px;
+  width: 116px;
+  height: 116px;
   flex: 0 0 auto;
 }
 
@@ -521,38 +521,45 @@ body.qianchuan-page #app {
   min-width: 0;
   flex: 1;
   display: grid;
-  gap: 10px;
+  align-content: center;
+  gap: 7px;
   margin: 0;
-  padding: 0;
+  padding: 1px 0 0;
   list-style: none;
 }
 
-.qc-channel-list li {
+.qc-channel-item {
   min-width: 0;
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: 8px minmax(0, 1fr) 42px;
   align-items: center;
-  gap: 8px;
-  color: #d7e2ff;
-  font-size: 12px;
+  gap: 7px;
+  min-height: 17px;
+  color: #c7d4f2;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
-.qc-channel-list li span:nth-child(2) {
+.qc-channel-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.qc-channel-list strong {
-  color: #fff;
+.qc-channel-percent {
+  color: #dce6ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
 }
 
 .qc-channel-dot {
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--channel-color);
+  box-shadow: 0 0 0 2px rgba(119, 147, 218, 0.1);
 }
 
 .qc-funnel-list {
