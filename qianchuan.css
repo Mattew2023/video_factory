@@ -74,8 +74,7 @@ body.qianchuan-page #app {
 .qc-legends,
 .qc-tool-actions,
 .qc-channel-layout,
-.qc-funnel-bar,
-.qc-comment-list li div {
+.qc-funnel-bar {
   display: flex;
   align-items: center;
 }
@@ -683,52 +682,68 @@ body.qianchuan-page #app {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 7px;
   margin: 0;
-  padding: 2px 0 0;
+  padding: 1px 0 0;
   overflow: hidden;
   list-style: none;
 }
 
-.qc-comment-list li {
+.qc-comment-item {
   display: grid;
+  gap: 4px;
+  padding: 6px 8px 7px;
+  border-left: 2px solid rgba(24, 196, 216, 0.34);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(32, 54, 103, 0.62), rgba(34, 47, 86, 0.34) 68%, rgba(34, 47, 86, 0.18)),
+    rgba(21, 31, 63, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(117, 147, 218, 0.08);
+}
+
+.qc-comment-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 6px;
-  padding: 9px 10px;
-  border-radius: 14px;
-  background: rgba(44, 60, 105, 0.58);
-}
-
-.qc-comment-list li div {
-  gap: 8px;
   min-width: 0;
+  align-items: center;
 }
 
-.qc-comment-list strong {
+.qc-comment-meta strong {
   min-width: 0;
   overflow: hidden;
-  color: #18c4d8;
+  color: #28c6df;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+  font-weight: 800;
 }
 
-.qc-comment-list time {
-  color: #8799c2;
+.qc-comment-meta time {
+  color: rgba(150, 165, 202, 0.78);
   font-size: 11px;
 }
 
-.qc-comment-list span {
+.qc-comment-tag {
+  justify-self: end;
   margin-left: auto;
-  padding: 1px 7px;
-  border-radius: 9px;
-  background: rgba(47, 115, 255, 0.22);
-  color: #aecaef;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(47, 115, 255, 0.16);
+  color: #a8bee7;
   font-size: 11px;
+  line-height: 16px;
+  box-shadow: inset 0 0 0 1px rgba(100, 138, 224, 0.2);
 }
 
-.qc-comment-list p {
+.qc-comment-item p {
+  min-width: 0;
   margin: 0;
-  color: #e6efff;
-  font-size: 13px;
-  line-height: 1.35;
+  overflow: hidden;
+  color: #dbe7ff;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+  line-height: 1.28;
 }

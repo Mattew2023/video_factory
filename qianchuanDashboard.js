@@ -183,11 +183,11 @@ function renderCommentsCard(data) {
   const comments = data.comments
     .map(
       (comment) => `
-        <li>
-          <div>
+        <li class="qc-comment-item">
+          <div class="qc-comment-meta">
             <strong>${escapeHtml(comment.user)}</strong>
             <time>${escapeHtml(comment.time)}</time>
-            <span>${escapeHtml(comment.tag)}</span>
+            <span class="qc-comment-tag">${escapeHtml(comment.tag)}</span>
           </div>
           <p>${escapeHtml(comment.content)}</p>
         </li>
