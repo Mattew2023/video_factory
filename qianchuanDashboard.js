@@ -149,17 +149,21 @@ function renderChannelCard(data) {
 }
 
 function renderFunnelCard(data) {
-  const maxValue = Math.max(...data.funnelData.map((item) => Number(item.value) || 0), 1);
   const rows = data.funnelData
-    .map((item) => {
-      const scale = Math.max(0.08, (Number(item.value) || 0) / maxValue);
+    .map((item, index, items) => {
+      const scale = Math.max(0.42, 1 - index * 0.17);
+      const hasNext = index < items.length - 1;
       return `
-        <li class="qc-funnel-row" style="--funnel-scale:${scale}">
+        <li class="qc-funnel-row ${hasNext ? "" : "is-last"}" style="--funnel-scale:${scale}">
           <div class="qc-funnel-bar">
             <span>${escapeHtml(item.name)}</span>
             <strong>${escapeHtml(formatNumber(item.value, 0))}</strong>
           </div>
-          <em>${escapeHtml(formatPercent(item.conversionRate))}</em>
+          ${
+            hasNext
+              ? `<div class="qc-funnel-link"><span aria-hidden="true"></span><em>${escapeHtml(formatPercent(item.conversionRate))}</em></div>`
+              : `<div class="qc-funnel-terminal"><span>成交</span></div>`
+          }
         </li>
       `;
     })
