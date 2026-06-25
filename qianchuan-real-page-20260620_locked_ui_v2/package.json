@@ -1,0 +1,11 @@
+{
+  "name": "qianchuan-real-page-20260620-locked-ui-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve-local.js",
+    "serve": "node scripts/serve-local.js",
+    "screenshot": "node scripts/export-screenshot.js"
+  }
+}

@@ -1,0 +1,382 @@
+{
+  "date": "2026-06-20",
+  "liveStatus": "已结束",
+  "startTime": "2026-06-20 06:45:31",
+  "duration": "4小时5分钟",
+  "anchor": {
+    "name": "青岛外贸8号店",
+    "avatarAsset": "assets/images/tos-cn-avt-0015_1a0c26ad77a8c8838835ea1bbf4b7eaf~c5_168x168.webp"
+  },
+  "topMetrics": {
+    "gmv": 14872.9,
+    "totalCost": 679.86,
+    "netTransactionRoi": 21.88,
+    "netTransactionAmount": 14872.9,
+    "gpm": 2364.65,
+    "viewToTransactionRate": 3.46,
+    "onlineViewerCount": 0,
+    "exposureToViewRate": 8.32,
+    "liveRoomViewerCount": 5896
+  },
+  "notice": {
+    "visible": true,
+    "currentIndex": 1,
+    "total": 2
+  },
+  "trendSettings": {
+    "granularity": "5分钟粒度",
+    "selectedMetrics": [
+      "净成交金额",
+      "消耗"
+    ],
+    "availableMetrics": [
+      "综合成本",
+      "净成交金额",
+      "综合ROI",
+      "消耗",
+      "整体成交金额",
+      "整体支付ROI"
+    ]
+  },
+  "trendData": [
+    {
+      "time": "06/20 08:25",
+      "netTransactionAmount": 615,
+      "cost": 15.1,
+      "events": [
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 08:30",
+      "netTransactionAmount": 34,
+      "cost": 15.4,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 08:35",
+      "netTransactionAmount": 456,
+      "cost": 14.5,
+      "events": [
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 08:40",
+      "netTransactionAmount": 386,
+      "cost": 12.6,
+      "events": []
+    },
+    {
+      "time": "06/20 08:45",
+      "netTransactionAmount": 282,
+      "cost": 14.9,
+      "events": [
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 08:50",
+      "netTransactionAmount": 778,
+      "cost": 13.7,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 08:55",
+      "netTransactionAmount": 548,
+      "cost": 15.9,
+      "events": []
+    },
+    {
+      "time": "06/20 09:00",
+      "netTransactionAmount": 104,
+      "cost": 13.4,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 09:05",
+      "netTransactionAmount": 556,
+      "cost": 15,
+      "events": []
+    },
+    {
+      "time": "06/20 09:10",
+      "netTransactionAmount": 445,
+      "cost": 15.8,
+      "events": []
+    },
+    {
+      "time": "06/20 09:15",
+      "netTransactionAmount": 252,
+      "cost": 18,
+      "events": []
+    },
+    {
+      "time": "06/20 09:20",
+      "netTransactionAmount": 245,
+      "cost": 19.4,
+      "events": [
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 09:25",
+      "netTransactionAmount": 247,
+      "cost": 18.8,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 09:30",
+      "netTransactionAmount": 392,
+      "cost": 18,
+      "events": []
+    },
+    {
+      "time": "06/20 09:35",
+      "netTransactionAmount": 104,
+      "cost": 19.5,
+      "events": []
+    },
+    {
+      "time": "06/20 09:40",
+      "netTransactionAmount": 218,
+      "cost": 18.6,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 09:45",
+      "netTransactionAmount": 318,
+      "cost": 18.1,
+      "events": []
+    },
+    {
+      "time": "06/20 09:50",
+      "netTransactionAmount": 382,
+      "cost": 18.7,
+      "events": []
+    },
+    {
+      "time": "06/20 09:55",
+      "netTransactionAmount": 778,
+      "cost": 19.5,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 10:00",
+      "netTransactionAmount": 352,
+      "cost": 20.7,
+      "events": [
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 10:05",
+      "netTransactionAmount": 272,
+      "cost": 24.2,
+      "events": []
+    },
+    {
+      "time": "06/20 10:10",
+      "netTransactionAmount": 402,
+      "cost": 32.1,
+      "events": [
+        {
+          "type": "投放动作"
+        },
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 10:15",
+      "netTransactionAmount": 426,
+      "cost": 21.8,
+      "events": [
+        {
+          "type": "调控动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 10:20",
+      "netTransactionAmount": 214,
+      "cost": 13.1,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 10:25",
+      "netTransactionAmount": 414,
+      "cost": 16.4,
+      "events": []
+    },
+    {
+      "time": "06/20 10:30",
+      "netTransactionAmount": 648,
+      "cost": 16.2,
+      "events": [
+        {
+          "type": "投放动作"
+        }
+      ]
+    },
+    {
+      "time": "06/20 10:35",
+      "netTransactionAmount": 8,
+      "cost": 0.2,
+      "events": []
+    }
+  ],
+  "rightCards": {
+    "channelComposition": {
+      "activeMetric": "观看次数",
+      "centerMetric": "成交金额",
+      "items": [
+        {
+          "name": "直播推荐",
+          "percent": 61.2,
+          "color": "#dbe5ff"
+        },
+        {
+          "name": "短视频及图文引流",
+          "percent": 19.7,
+          "color": "#aec1f7"
+        },
+        {
+          "name": "抖音商城推荐",
+          "percent": 10.83,
+          "color": "#89a3f2"
+        },
+        {
+          "name": "个人主页&店铺&橱窗",
+          "percent": 3.43,
+          "color": "#5f83ed"
+        },
+        {
+          "name": "头条西瓜",
+          "percent": 2.18,
+          "color": "#3865e9"
+        }
+      ]
+    },
+    "funnel": {
+      "items": [
+        {
+          "label": "直播间整体曝光次数",
+          "value": 84840,
+          "ratio": "8.32%",
+          "width": 100
+        },
+        {
+          "label": "直播间观看次数",
+          "value": 7062,
+          "ratio": "83.60%",
+          "width": 88
+        },
+        {
+          "label": "商品点击次数",
+          "value": 5904,
+          "ratio": "3.65%",
+          "width": 74
+        },
+        {
+          "label": "成交订单数",
+          "value": 258,
+          "ratio": "4.37%",
+          "width": 62
+        }
+      ]
+    },
+    "livePanel": {
+      "mode": "replay",
+      "coverAsset": null
+    }
+  },
+  "comments": {
+    "state": "livePanelEmpty",
+    "items": []
+  },
+  "warningCount": 0,
+  "recentSevenDays": [
+    {
+      "date": "2026-06-14",
+      "gmv": 0,
+      "roi": 0,
+      "cost": 0
+    },
+    {
+      "date": "2026-06-15",
+      "gmv": 0,
+      "roi": 0,
+      "cost": 0
+    },
+    {
+      "date": "2026-06-16",
+      "gmv": 0,
+      "roi": 0,
+      "cost": 0
+    },
+    {
+      "date": "2026-06-17",
+      "gmv": 0,
+      "roi": 0,
+      "cost": 0
+    },
+    {
+      "date": "2026-06-18",
+      "gmv": 0,
+      "roi": 0,
+      "cost": 0
+    },
+    {
+      "date": "2026-06-19",
+      "gmv": 0,
+      "roi": 0,
+      "cost": 0
+    },
+    {
+      "date": "2026-06-20",
+      "gmv": 14872.9,
+      "roi": 21.88,
+      "cost": 679.86
+    }
+  ]
+}
