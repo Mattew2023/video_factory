@@ -45,8 +45,8 @@ button {
 .top-bar {
   display: flex;
   align-items: center;
-  flex: 0 0 70px;
-  height: 70px;
+  flex: 0 0 68px;
+  height: 68px;
 }
 
 .brand-cluster {
@@ -142,13 +142,27 @@ button {
   cursor: default;
 }
 
-.toolbar-button {
+.top-actions {
+  display: inline-flex;
+  align-items: center;
   height: 44px;
-  padding: 0 18px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.15);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.toolbar-button {
+  height: 44px;
+  padding: 0 16px;
+  background: transparent;
+}
+
+.top-action-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .notice-bar {
@@ -156,7 +170,7 @@ button {
   align-items: center;
   flex: 0 0 43px;
   height: 43px;
-  margin: 14px 0 22px;
+  margin: 11px 0 20px;
   padding: 0 14px;
   border-radius: 22px;
   background: rgba(77, 84, 105, 0.72);

@@ -201,8 +201,11 @@ export function renderDashboardSkeleton(root, data) {
           <span class="start-time">开播时间：${escapeHtml(data.startTime)}</span>
           <span class="meta-divider"></span>
           <button class="link-button" type="button">数据口径说明</button>
-          <button class="toolbar-button refresh-button" type="button">↻ 刷新数据</button>
-          <button class="toolbar-button fullscreen-button" type="button">□ 全屏</button>
+          <span class="top-actions">
+            <button class="toolbar-button refresh-button" type="button">↻ 刷新数据</button>
+            <span class="top-action-divider"></span>
+            <button class="toolbar-button fullscreen-button" type="button">□ 全屏</button>
+          </span>
         </div>
       </header>
 
