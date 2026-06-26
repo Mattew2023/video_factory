@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "preview": "node scripts/serve-local.js",
     "start": "node scripts/serve-local.js",
     "serve": "node scripts/serve-local.js",
     "screenshot": "node scripts/export-screenshot.js"
