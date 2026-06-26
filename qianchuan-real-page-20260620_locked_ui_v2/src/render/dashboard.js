@@ -38,11 +38,11 @@ function escapeHtml(value) {
 function renderMetricValue(value, options = {}) {
   const parts = splitMetricValue(value, options);
 
-  return `
-    <span class="metric-number-main">${escapeHtml(parts.integerPart)}</span>
-    ${parts.decimalPart ? `<span class="metric-number-decimal">${escapeHtml(parts.decimalPart)}</span>` : ""}
-    ${parts.suffix ? `<span class="metric-number-suffix">${escapeHtml(parts.suffix)}</span>` : ""}
-  `;
+  return [
+    `<span class="metric-number-main">${escapeHtml(parts.integerPart)}</span>`,
+    parts.decimalPart ? `<span class="metric-number-decimal">${escapeHtml(parts.decimalPart)}</span>` : "",
+    parts.suffix ? `<span class="metric-number-suffix">${escapeHtml(parts.suffix)}</span>` : ""
+  ].join("");
 }
 
 function renderTopMetrics(topMetrics = {}) {
@@ -185,6 +185,7 @@ export function renderDashboardSkeleton(root, data) {
   const rightCards = data.rightCards || {};
 
   root.innerHTML = `
+    <div class="preview-canvas">
     <section class="dashboard-shell" aria-label="locked dashboard">
       <header class="top-bar">
         <div class="brand-cluster">
@@ -262,6 +263,7 @@ export function renderDashboardSkeleton(root, data) {
         </aside>
       </div>
     </section>
+    </div>
   `;
 
   renderStaticTrendChart(root.querySelector("#trend-chart"), trendData);

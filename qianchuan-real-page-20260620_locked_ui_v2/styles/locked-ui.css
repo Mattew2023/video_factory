@@ -4,6 +4,11 @@
   background: #050717;
   color: #fff;
   font-size: 16px;
+  --design-width: 2560px;
+  --design-height: 1348px;
+  --preview-scale: 1;
+  --scaled-design-width: var(--design-width);
+  --scaled-design-height: var(--design-height);
 }
 
 * {
@@ -11,9 +16,9 @@
 }
 
 html,
-body,
-#app {
+body {
   min-height: 100%;
+  min-width: 100%;
 }
 
 body {
@@ -28,10 +33,25 @@ button {
   font: inherit;
 }
 
+#app {
+  width: var(--scaled-design-width);
+  height: var(--scaled-design-height);
+  min-width: var(--scaled-design-width);
+  min-height: var(--scaled-design-height);
+}
+
+.preview-canvas {
+  width: var(--design-width);
+  height: var(--design-height);
+  transform: scale(var(--preview-scale));
+  transform-origin: top left;
+}
+
 .dashboard-shell {
-  min-width: 1280px;
-  height: 100vh;
-  min-height: 0;
+  width: var(--design-width);
+  height: var(--design-height);
+  min-width: var(--design-width);
+  min-height: var(--design-height);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -230,8 +250,8 @@ button {
 
 .main-column {
   display: grid;
-  grid-template-rows: 286px minmax(0, 1fr);
-  gap: 22px;
+  grid-template-rows: 296px minmax(0, 1fr);
+  gap: 20px;
   min-height: 0;
   min-width: 0;
 }
@@ -248,27 +268,28 @@ button {
 .metrics-card {
   position: relative;
   overflow: hidden;
+  border-radius: 40px;
+  border-color: rgba(66, 134, 230, 0.45);
   background:
-    linear-gradient(120deg, rgba(0, 86, 208, 0.72), rgba(11, 55, 142, 0.85) 42%, rgba(9, 33, 85, 0.98) 100%);
+    linear-gradient(120deg, rgba(2, 92, 210, 0.78), rgba(13, 61, 151, 0.9) 42%, rgba(8, 34, 92, 0.98) 100%);
 }
 
 .metrics-actions {
   position: absolute;
-  top: 24px;
-  right: 28px;
+  top: 23px;
+  right: 30px;
   display: flex;
-  gap: 14px;
+  gap: 13px;
   align-items: center;
 }
 
-.metrics-actions button,
-.trend-selectors button {
-  height: 42px;
-  padding: 0 18px;
+.metrics-actions button {
+  height: 40px;
+  padding: 0 17px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 21px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.13);
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .circle-button {
@@ -281,13 +302,20 @@ button {
   line-height: 46px;
 }
 
+.metrics-actions .circle-button {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  line-height: 44px;
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   grid-template-rows: 1fr 1fr;
   align-items: center;
   height: 100%;
-  padding: 42px 74px 36px;
+  padding: 44px 82px 38px;
   text-align: center;
 }
 
@@ -316,37 +344,41 @@ button {
 
 .metric-name {
   color: rgba(210, 224, 255, 0.72);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
 .metric-number {
-  margin-top: 8px;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-top: 9px;
   color: #fff;
+  line-height: 1;
   text-shadow: 0 0 18px rgba(155, 190, 255, 0.32);
   white-space: nowrap;
 }
 
 .metric-number-main {
-  font-size: 42px;
+  font-size: 40px;
   font-weight: 800;
   letter-spacing: 0;
 }
 
 .metric-item-primary .metric-number-main {
-  font-size: 58px;
+  font-size: 56px;
 }
 
 .metric-number-decimal,
 .metric-number-suffix {
-  font-size: 31px;
+  font-size: 29px;
   font-weight: 800;
 }
 
 .metric-item-primary .metric-number-decimal {
-  font-size: 42px;
+  font-size: 40px;
 }
 
 .trend-card {
@@ -722,28 +754,4 @@ button {
   color: rgba(255, 255, 255, 0.94);
   font-size: 22px;
   font-weight: 700;
-}
-
-@media (max-width: 1500px) {
-  .dashboard-shell {
-    padding: 24px;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: minmax(760px, 1fr) 420px;
-  }
-
-  .side-card {
-    padding: 28px 24px;
-  }
-
-  .channel-body {
-    grid-template-columns: 144px 1fr;
-    gap: 24px;
-  }
-
-  .doughnut {
-    width: 148px;
-    height: 148px;
-  }
 }
