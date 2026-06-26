@@ -265,6 +265,11 @@
       "events": []
     }
   ],
+  "livePreview": {
+    "mode": "empty",
+    "image": "",
+    "text": "主播暂不在播"
+  },
   "rightCards": {
     "channelComposition": {
       "activeMetric": "观看次数",

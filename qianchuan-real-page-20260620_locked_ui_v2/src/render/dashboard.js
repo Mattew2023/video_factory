@@ -153,11 +153,14 @@ function renderFunnelCard(funnel = {}) {
   `;
 }
 
-function renderLiveCard(rightCards = {}, comments = {}) {
+function renderLiveCard(comments = {}, livePreview = {}) {
   const isCommentMode = comments.state === "empty";
   const title = isCommentMode ? "直播实时评论" : "直播间画面";
   const buttonText = isCommentMode ? "直播画面" : "直播评论";
-  const emptyText = isCommentMode ? "暂无评论" : "主播暂不在播";
+  const fallbackText = isCommentMode ? "暂无评论" : "主播暂不在播";
+  const emptyText = isCommentMode ? fallbackText : livePreview.text || fallbackText;
+  const imagePath = !isCommentMode && livePreview.mode === "image" ? String(livePreview.image || "").trim() : "";
+  const hasImage = Boolean(imagePath);
 
   return `
     <section class="side-card live-card">
@@ -165,9 +168,9 @@ function renderLiveCard(rightCards = {}, comments = {}) {
         <h2>${title}</h2>
         <button class="pill-button" type="button">↔ ${buttonText}</button>
       </div>
-      <div class="live-preview ${rightCards.livePanel?.coverAsset ? "live-preview-with-image" : ""}"
-        ${rightCards.livePanel?.coverAsset ? `style="background-image:url('${escapeHtml(rightCards.livePanel.coverAsset)}')"` : ""}>
-        <div class="live-preview-mask">${emptyText}</div>
+      <div class="live-preview ${hasImage ? "live-preview-with-image" : "live-preview-empty"}">
+        ${hasImage ? `<img class="live-preview-image" src="${escapeHtml(imagePath)}" alt="" onerror="this.closest('.live-preview').classList.add('live-preview-empty'); this.remove();" />` : ""}
+        <div class="live-preview-mask">${escapeHtml(emptyText)}</div>
       </div>
     </section>
   `;
@@ -259,7 +262,7 @@ export function renderDashboardSkeleton(root, data) {
         <aside class="side-column">
           ${renderChannelCard(rightCards.channelComposition)}
           ${renderFunnelCard(rightCards.funnel)}
-          ${renderLiveCard(rightCards, data.comments || {})}
+          ${renderLiveCard(data.comments || {}, data.livePreview || {})}
         </aside>
       </div>
     </section>
