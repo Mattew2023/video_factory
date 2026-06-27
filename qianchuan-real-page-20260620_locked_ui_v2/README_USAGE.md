@@ -281,7 +281,7 @@ assets/live-preview/example.png
 
 1. `shopName` 字段当前未实现，不要误以为修改 `shopName` 一定会影响页面；当前页面读取的是 `anchor.name`。
 2. `rightCards.livePanel` 当前是保留结构，直播画面替换以 `livePreview` 为准。
-3. `AGENTS.md` 当前文件存在但内容为空，项目操作规则暂未从 `AGENTS.md` 中确认。
+3. `AGENTS.md` 已补全，是 Codex / AI 的项目工作规则入口；人类日常操作优先阅读 `README_USAGE.md`，AI 执行任务前应先阅读 `AGENTS.md`。
 4. UI 已锁定，后续修改应优先走数据配置，不要直接改 UI。
 
 ## 13. 给未来自己的提醒
