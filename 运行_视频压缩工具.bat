@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableExtensions
 
-set "SCRIPT=%~dp0视频压缩工具.py"
-set "LOG=%~dp0视频压缩工具_启动日志.txt"
+set "SCRIPT=%~dp0video_compressor_tool.py"
+set "LOG=%~dp0video_compressor_startup.log"
 set "BUNDLED_PYTHON=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 
 if not exist "%SCRIPT%" (
