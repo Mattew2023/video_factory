@@ -1,0 +1,20 @@
+{
+  "scan_dir": "",
+  "output_dir": "",
+  "pending_delete_dir": "",
+  "daily_scan_time": "02:30",
+  "min_size_mb": 500,
+  "stable_wait_minutes": 10,
+  "target_size_mb": 950,
+  "target_audio_bitrate_kbps": 96,
+  "source_action": "keep",
+  "auto_scan_enabled": false,
+  "records_path": "",
+  "supported_extensions": [
+    ".mp4",
+    ".ts",
+    ".mkv",
+    ".mov",
+    ".avi"
+  ]
+}
