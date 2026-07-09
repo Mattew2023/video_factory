@@ -18,6 +18,14 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from file_drop_support import create_tk_root, enable_file_drop
+from speed_compression import (
+    SPEED_FACTOR_LABELS,
+    build_speed_filter_args,
+    format_speed_factor,
+    speed_adjusted_duration,
+    speed_factor_enabled,
+    speed_factor_from_label,
+)
 
 
 MISSING_FFMPEG_MESSAGE = (
@@ -63,6 +71,7 @@ class CompressionOptions:
     label: str
     target_size_mb: float
     audio_bitrate_kbps: int
+    speed_factor: float = 1.0
 
 
 COMPRESSION_PRESETS = (
@@ -294,6 +303,11 @@ def format_file_size(size: int) -> str:
         value /= 1024
 
 
+def natural_path_sort_key(path: Path) -> list[object]:
+    parts = re.split(r"(\d+)", path.name.lower())
+    return [int(part) if part.isdigit() else part for part in parts]
+
+
 def short_error_message(message: object, max_length: int = 300) -> str:
     one_line_message = " ".join(str(message).split())
     if len(one_line_message) <= max_length:
@@ -368,6 +382,7 @@ class UnifiedVideoToolApp:
         self.completed_output_files: list[Path] = []
         self.video_drop_widgets: list[tk.Widget] = []
         self.stitch_drop_widgets: list[tk.Widget] = []
+        self.stitch_order_listbox: tk.Listbox | None = None
         self.cancel_buttons: list[tk.Widget] = []
 
         self.ffmpeg_text = tk.StringVar(value="正在检测 ffmpeg...")
@@ -383,6 +398,7 @@ class UnifiedVideoToolApp:
         self.audio_bitrate_text = tk.StringVar(
             value=f"{COMPRESSION_PRESETS[0].audio_bitrate_kbps}k"
         )
+        self.speed_factor_text = tk.StringVar(value=SPEED_FACTOR_LABELS[0])
         self.overwrite_merge = tk.BooleanVar(value=False)
         self.overall_progress = tk.DoubleVar(value=0.0)
         self.overall_progress_text = tk.StringVar(value="整体进度：第 0 / 0 个，整体百分比 0%")
@@ -423,7 +439,7 @@ class UnifiedVideoToolApp:
         stitch_tab = ttk.Frame(notebook, padding=12)
         compress_tab = ttk.Frame(notebook, padding=12)
         notebook.add(merge_tab, text="抖音音视频合并")
-        notebook.add(stitch_tab, text="两段视频拼接")
+        notebook.add(stitch_tab, text="多段视频拼接")
         notebook.add(compress_tab, text="视频压缩")
 
         self.build_merge_tab(merge_tab)
@@ -456,13 +472,14 @@ class UnifiedVideoToolApp:
 
     def build_stitch_tab(self, parent: ttk.Frame) -> None:
         parent.columnconfigure(1, weight=1)
+        parent.rowconfigure(2, weight=1)
 
-        ttk.Label(parent, text="两段视频").grid(row=0, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(parent, text="拼接视频").grid(row=0, column=0, sticky="w", pady=(0, 8))
         file_entry = ttk.Entry(parent, textvariable=self.stitch_file_text, state="readonly")
         file_entry.grid(row=0, column=1, sticky="ew", padx=(8, 8), pady=(0, 8))
         file_button = ttk.Button(
             parent,
-            text="选择两段视频",
+            text="选择多段视频",
             command=self.select_stitch_files,
         )
         file_button.grid(row=0, column=2, sticky="e", pady=(0, 8))
@@ -489,12 +506,58 @@ class UnifiedVideoToolApp:
         open_dir_button.grid(row=1, column=3, sticky="e", pady=(0, 8), padx=(8, 0))
         self.controls.append(open_dir_button)
 
+        order_frame = ttk.LabelFrame(parent, text="拼接顺序（从上到下）", padding=(8, 6))
+        order_frame.grid(row=2, column=0, columnspan=4, sticky="nsew", pady=(0, 8))
+        order_frame.columnconfigure(0, weight=1)
+        order_frame.rowconfigure(0, weight=1)
+
+        list_frame = ttk.Frame(order_frame)
+        list_frame.grid(row=0, column=0, sticky="nsew")
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+
+        self.stitch_order_listbox = tk.Listbox(
+            list_frame,
+            height=6,
+            exportselection=False,
+        )
+        self.stitch_order_listbox.grid(row=0, column=0, sticky="nsew")
+        order_scrollbar = ttk.Scrollbar(
+            list_frame,
+            orient=tk.VERTICAL,
+            command=self.stitch_order_listbox.yview,
+        )
+        order_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.stitch_order_listbox.configure(yscrollcommand=order_scrollbar.set)
+
+        order_buttons = ttk.Frame(order_frame)
+        order_buttons.grid(row=0, column=1, sticky="ns", padx=(8, 0))
+        move_up_button = ttk.Button(
+            order_buttons,
+            text="上移",
+            command=lambda: self.move_selected_stitch_file(-1),
+        )
+        move_up_button.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        move_down_button = ttk.Button(
+            order_buttons,
+            text="下移",
+            command=lambda: self.move_selected_stitch_file(1),
+        )
+        move_down_button.grid(row=1, column=0, sticky="ew", pady=(0, 6))
+        sort_button = ttk.Button(
+            order_buttons,
+            text="按文件名排序",
+            command=self.sort_stitch_files_by_name,
+        )
+        sort_button.grid(row=2, column=0, sticky="ew")
+        self.controls.extend([self.stitch_order_listbox, move_up_button, move_down_button, sort_button])
+
         start_button = ttk.Button(parent, text="开始拼接", command=self.start_stitch)
-        start_button.grid(row=2, column=1, sticky="w", padx=(8, 8), pady=(4, 0))
+        start_button.grid(row=3, column=1, sticky="w", padx=(8, 8), pady=(4, 0))
         self.controls.append(start_button)
 
         progress_frame = ttk.Frame(parent)
-        progress_frame.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(14, 0))
+        progress_frame.grid(row=4, column=0, columnspan=4, sticky="ew", pady=(14, 0))
         progress_frame.columnconfigure(0, weight=1)
 
         ttk.Label(progress_frame, textvariable=self.compress_status_text).grid(
@@ -609,6 +672,17 @@ class UnifiedVideoToolApp:
         )
         audio_combo.grid(row=1, column=1, sticky="w", padx=(8, 16))
         self.controls.append(audio_combo)
+
+        ttk.Label(options_frame, text="时长压缩").grid(row=1, column=2, sticky="w")
+        speed_combo = ttk.Combobox(
+            options_frame,
+            textvariable=self.speed_factor_text,
+            values=SPEED_FACTOR_LABELS,
+            state="readonly",
+            width=10,
+        )
+        speed_combo.grid(row=1, column=3, sticky="w", padx=(8, 0))
+        self.controls.append(speed_combo)
 
         start_button = ttk.Button(parent, text="开始压缩", command=self.start_compress)
         start_button.grid(row=3, column=1, sticky="w", padx=(8, 8), pady=(4, 0))
@@ -787,10 +861,13 @@ class UnifiedVideoToolApp:
             messagebox.showwarning("音频码率无效", "请选择有效的音频码率。")
             return None
 
+        speed_factor = speed_factor_from_label(self.speed_factor_text.get())
+
         return CompressionOptions(
             label=label,
             target_size_mb=target_size_mb,
             audio_bitrate_kbps=audio_bitrate_kbps,
+            speed_factor=speed_factor,
         )
 
     def refresh_tools(self) -> None:
@@ -918,13 +995,66 @@ class UnifiedVideoToolApp:
 
     def select_stitch_files(self) -> None:
         file_paths = filedialog.askopenfilenames(
-            title="选择两段视频文件",
+            title="选择多段视频文件",
             filetypes=VIDEO_FILETYPES,
         )
         if not file_paths:
             return
 
         self.accept_stitch_files([Path(file_path) for file_path in file_paths], source="选择")
+
+    def update_stitch_order_view(self) -> None:
+        count = len(self.stitch_files)
+        if count == 0:
+            self.stitch_file_text.set("未选择")
+        else:
+            self.stitch_file_text.set(f"已选择 {count} 个视频，请确认拼接顺序")
+
+        if not self.stitch_order_listbox:
+            return
+
+        self.stitch_order_listbox.delete(0, tk.END)
+        for index, input_file in enumerate(self.stitch_files, start=1):
+            self.stitch_order_listbox.insert(tk.END, f"{index}. {input_file.name}")
+        if count:
+            self.stitch_order_listbox.selection_set(0)
+            self.stitch_order_listbox.activate(0)
+
+    def move_selected_stitch_file(self, offset: int) -> None:
+        if not self.stitch_order_listbox or not self.stitch_files:
+            return
+
+        selected = self.stitch_order_listbox.curselection()
+        if not selected:
+            return
+
+        current_index = selected[0]
+        new_index = current_index + offset
+        if new_index < 0 or new_index >= len(self.stitch_files):
+            return
+
+        self.stitch_files[current_index], self.stitch_files[new_index] = (
+            self.stitch_files[new_index],
+            self.stitch_files[current_index],
+        )
+        self.update_stitch_order_view()
+        self.stitch_order_listbox.selection_clear(0, tk.END)
+        self.stitch_order_listbox.selection_set(new_index)
+        self.stitch_order_listbox.activate(new_index)
+        self.write_log(
+            f"已调整拼接顺序：第 {new_index + 1} 段为 {self.stitch_files[new_index].name}"
+        )
+
+    def sort_stitch_files_by_name(self) -> None:
+        if len(self.stitch_files) < 2:
+            return
+
+        self.stitch_files = sorted(self.stitch_files, key=natural_path_sort_key)
+        self.update_stitch_order_view()
+        self.write_log("")
+        self.write_log("已按文件名自然排序拼接顺序：")
+        for index, input_file in enumerate(self.stitch_files, start=1):
+            self.write_log(f"{index}. {input_file}")
 
     def accept_stitch_files(self, selected_files: list[Path], source: str) -> bool:
         unique_files: list[Path] = []
@@ -960,18 +1090,18 @@ class UnifiedVideoToolApp:
                 "暂时只支持 .mp4 / .ts / .mkv / .mov 文件。",
             )
 
-        if len(supported_files) != 2:
+        if len(supported_files) < 2:
             messagebox.showwarning(
-                "数量不正确",
-                f"请一次选择 2 个视频文件。当前识别到 {len(supported_files)} 个。",
+                "数量不足",
+                f"请至少选择 2 个视频文件。当前识别到 {len(supported_files)} 个。",
             )
             return False
 
         self.stitch_files = supported_files
-        self.stitch_file_text.set("已选择 2 个视频")
+        self.update_stitch_order_view()
 
         self.write_log("")
-        self.write_log(f"已{source} 2 个待拼接视频。")
+        self.write_log(f"已{source} {len(self.stitch_files)} 个待拼接视频，请确认顺序。")
         for index, input_file in enumerate(self.stitch_files, start=1):
             self.write_log(f"{index}. {input_file}")
         return True
@@ -1158,8 +1288,8 @@ class UnifiedVideoToolApp:
             return
         if not self.ensure_ffmpeg_tools_available():
             return
-        if len(self.stitch_files) != 2:
-            messagebox.showwarning("缺少视频文件", "请先选择 2 个要拼接的视频文件。")
+        if len(self.stitch_files) < 2:
+            messagebox.showwarning("缺少视频文件", "请先选择至少 2 个要拼接的视频文件。")
             return
         if not self.stitch_output_dir:
             messagebox.showwarning("缺少输出目录", "请先点击“选择目录”。")
@@ -1204,7 +1334,7 @@ class UnifiedVideoToolApp:
         ffprobe: Path,
     ) -> None:
         self.log("")
-        self.log("开始拼接两段视频...")
+        self.log(f"开始拼接 {len(input_files)} 段视频...")
         for index, input_file in enumerate(input_files, start=1):
             self.log(f"第 {index} 段：{input_file}")
         self.log(f"输出文件：{output_file}")
@@ -1221,12 +1351,21 @@ class UnifiedVideoToolApp:
             dimensions.append(dimension)
             self.log(f"{input_file.name} 画面尺寸：{dimension.label}")
 
-        if dimensions[0] != dimensions[1]:
+        reference_dimension = dimensions[0]
+        mismatched_dimensions = [
+            (index, dimension)
+            for index, dimension in enumerate(dimensions, start=1)
+            if dimension != reference_dimension
+        ]
+        if mismatched_dimensions:
+            dimension_lines = "\n".join(
+                f"第 {index} 段：{dimension.label}"
+                for index, dimension in enumerate(dimensions, start=1)
+            )
             message = (
-                "两段视频画面尺寸不一致，无法在不改变原视频大小的情况下无损拼接。\n\n"
-                f"第 1 段：{dimensions[0].label}\n"
-                f"第 2 段：{dimensions[1].label}\n\n"
-                "请先把两段视频处理成相同尺寸后再拼接。"
+                "多段视频画面尺寸不一致，无法在不改变原视频大小的情况下无损拼接。\n\n"
+                f"{dimension_lines}\n\n"
+                "请先把所有视频处理成相同尺寸后再拼接。"
             )
             self.log(message)
             self.post_compress_progress(status="拼接失败")
@@ -1236,10 +1375,10 @@ class UnifiedVideoToolApp:
         durations = [self.probe_video_duration(input_file, ffprobe) for input_file in input_files]
         total_duration = sum(duration for duration in durations if duration > 0)
         original_total_size = sum(input_file.stat().st_size for input_file in input_files)
-        self.log(f"拼接后画面尺寸保持：{dimensions[0].label}")
-        self.log(f"两段原文件总大小：{format_file_size(original_total_size)}")
+        self.log(f"拼接后画面尺寸保持：{reference_dimension.label}")
+        self.log(f"{len(input_files)} 段原文件总大小：{format_file_size(original_total_size)}")
         if total_duration > 0:
-            self.log(f"两段总时长：{format_seconds(total_duration)}")
+            self.log(f"{len(input_files)} 段总时长：{format_seconds(total_duration)}")
 
         concat_list_path = self.create_concat_list_file(input_files)
         self.compress_started_at = time.monotonic()
@@ -1344,7 +1483,8 @@ class UnifiedVideoToolApp:
             self.completed_output_files = [output_file]
             summary = self.build_stitch_success_summary(
                 output_file,
-                dimensions[0],
+                reference_dimension,
+                len(input_files),
                 original_total_size,
                 output_size,
                 elapsed,
@@ -1364,7 +1504,7 @@ class UnifiedVideoToolApp:
 
         error_text = self.build_error_summary(return_code, error_lines)
         message = (
-            "拼接失败。两段视频需要有兼容的编码、帧率、音轨等参数，才能在不重新编码的情况下保持大小不变。\n\n"
+            "拼接失败。多段视频需要有兼容的编码、帧率、音轨等参数，才能在不重新编码的情况下保持大小不变。\n\n"
             f"{error_text}"
         )
         self.log(message)
@@ -1387,6 +1527,7 @@ class UnifiedVideoToolApp:
         self,
         output_file: Path,
         dimensions: VideoDimensions,
+        segment_count: int,
         original_total_size: int,
         output_size: int,
         elapsed: float,
@@ -1406,8 +1547,9 @@ class UnifiedVideoToolApp:
             [
                 f"输出文件：{output_file}",
                 "拼接方式：无重新编码",
+                f"拼接段数：{segment_count}",
                 f"画面尺寸：{dimensions.label}",
-                f"两段原文件总大小：{format_file_size(original_total_size)}",
+                f"原文件总大小：{format_file_size(original_total_size)}",
                 f"拼接后文件大小：{format_file_size(output_size)}",
                 f"大小差异：{delta_text}",
                 f"总耗时：{format_seconds(elapsed)}",
@@ -1645,6 +1787,15 @@ class UnifiedVideoToolApp:
             duration,
             compression_options,
         )
+        expected_output_duration = speed_adjusted_duration(
+            duration,
+            compression_options.speed_factor,
+        )
+        has_audio = True
+        if speed_factor_enabled(compression_options.speed_factor):
+            source_media = probe_media(input_file, ffprobe)
+            if not source_media.error:
+                has_audio = source_media.has_audio
         bufsize_kbps = video_bitrate_kbps * 2
 
         self.log(f"视频总时长：{format_seconds(duration)}")
@@ -1654,6 +1805,13 @@ class UnifiedVideoToolApp:
         self.log(f"压缩策略：{strategy}")
         self.log(f"自动计算的视频码率：{video_bitrate_kbps}k")
         self.log(f"音频码率：{audio_bitrate_kbps}k")
+        if speed_factor_enabled(compression_options.speed_factor):
+            self.log(
+                f"时长压缩：{format_speed_factor(compression_options.speed_factor)}（保持音调）"
+            )
+            self.log(f"预计输出时长：{format_seconds(expected_output_duration)}")
+            if not has_audio:
+                self.log("未检测到音频流，仅加速画面。")
         if video_bitrate_kbps < QUALITY_WARNING_VIDEO_BITRATE_KBPS:
             self.log("视频时长过长，压到目标大小会明显损失画质。")
         self.post_compress_progress(
@@ -1672,20 +1830,30 @@ class UnifiedVideoToolApp:
             "pipe:1",
             "-i",
             str(input_file),
-            "-c:v",
-            "libx264",
-            "-b:v",
-            f"{video_bitrate_kbps}k",
-            "-maxrate",
-            f"{video_bitrate_kbps}k",
-            "-bufsize",
-            f"{bufsize_kbps}k",
-            "-c:a",
-            "aac",
-            "-b:a",
-            f"{audio_bitrate_kbps}k",
-            str(output_file),
         ]
+        command.extend(
+            build_speed_filter_args(
+                compression_options.speed_factor,
+                include_audio=has_audio,
+            )
+        )
+        command.extend(
+            [
+                "-c:v",
+                "libx264",
+                "-b:v",
+                f"{video_bitrate_kbps}k",
+                "-maxrate",
+                f"{video_bitrate_kbps}k",
+                "-bufsize",
+                f"{bufsize_kbps}k",
+                "-c:a",
+                "aac",
+                "-b:a",
+                f"{audio_bitrate_kbps}k",
+                str(output_file),
+            ]
+        )
 
         self.log("ffmpeg 已启动，正在读取实时进度...")
         error_lines: list[str] = []
@@ -1720,16 +1888,22 @@ class UnifiedVideoToolApp:
                 key, value = line.split("=", 1)
                 if key in {"out_time_ms", "out_time_us"}:
                     current_seconds = self.parse_progress_microseconds(value)
-                    self.update_compress_progress_from_time(current_seconds, duration)
+                    self.update_compress_progress_from_time(
+                        current_seconds,
+                        expected_output_duration,
+                    )
                 elif key == "out_time":
                     current_seconds = parse_ffmpeg_time(value)
-                    self.update_compress_progress_from_time(current_seconds, duration)
+                    self.update_compress_progress_from_time(
+                        current_seconds,
+                        expected_output_duration,
+                    )
                 elif key == "progress" and value == "end":
                     self.post_compress_progress(
                         status="正在压缩",
                         percent=100,
-                        current=duration,
-                        total=duration,
+                        current=expected_output_duration,
+                        total=expected_output_duration,
                     )
                     if self.batch_total_count > 0:
                         self.post_overall_progress(
@@ -1767,8 +1941,8 @@ class UnifiedVideoToolApp:
             self.post_compress_progress(
                 status="已完成",
                 percent=100,
-                current=duration,
-                total=duration,
+                current=expected_output_duration,
+                total=expected_output_duration,
                 remaining=0,
             )
             if show_result:
@@ -2199,6 +2373,7 @@ class UnifiedVideoToolApp:
                 f"是否小于目标大小：{under_target}",
                 f"是否小于 1GB：{under_one_gb}",
                 f"压缩策略：{strategy}",
+                f"时长压缩：{format_speed_factor(compression_options.speed_factor)}",
                 f"视频码率：{video_bitrate_kbps}k",
                 f"音频码率：{audio_bitrate_kbps}k",
                 f"压缩率：{ratio:.1f}%",

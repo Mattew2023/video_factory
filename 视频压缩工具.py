@@ -21,6 +21,14 @@ from compression_records import CompressionRecords, build_task_id
 from compression_runner import verify_compressed_output
 from file_drop_support import create_tk_root, enable_file_drop
 from media_probe import probe_media
+from speed_compression import (
+    SPEED_FACTOR_LABELS,
+    build_speed_filter_args,
+    format_speed_factor,
+    speed_adjusted_duration,
+    speed_factor_enabled,
+    speed_factor_from_label,
+)
 from video_scanner import scan_recording_directory
 
 
@@ -161,6 +169,7 @@ class VideoCompressorApp:
             value=format_target_size_mb(COMPRESSION_PRESETS[0][1])
         )
         self.audio_bitrate_text = tk.StringVar(value=f"{COMPRESSION_PRESETS[0][2]}k")
+        self.speed_factor_text = tk.StringVar(value=SPEED_FACTOR_LABELS[0])
         self.scan_dir_text = tk.StringVar(
             value=self.format_configured_path(self.auto_scan_config.scan_dir, "未选择扫描目录")
         )
@@ -293,11 +302,22 @@ class VideoCompressorApp:
             width=10,
         )
         audio_combo.grid(row=1, column=1, sticky="w", padx=(8, 16))
+
+        tk.Label(options_frame, text="时长压缩").grid(row=1, column=2, sticky="w")
+        speed_combo = ttk.Combobox(
+            options_frame,
+            textvariable=self.speed_factor_text,
+            values=SPEED_FACTOR_LABELS,
+            state="readonly",
+            width=10,
+        )
+        speed_combo.grid(row=1, column=3, sticky="w", padx=(8, 0))
         self.option_controls.extend(
             [
                 (preset_combo, "readonly"),
                 (target_size_entry, tk.NORMAL),
                 (audio_combo, "readonly"),
+                (speed_combo, "readonly"),
             ]
         )
 
@@ -667,7 +687,12 @@ class VideoCompressorApp:
                 options.get("target_video_bitrate_kbps")
                 or task["target_video_bitrate_kbps"]
             ),
-            "strategy": options.get("strategy") or task.get("policy_reason") or "自动扫描智能压缩",
+            "strategy": (
+                options.get("strategy")
+                or task.get("policy_reason")
+                or "自动扫描智能压缩"
+            ),
+            "speed_factor": float(options.get("speed_factor") or 1.0),
         }
 
     def start_auto_queue_compress(self):
@@ -888,10 +913,13 @@ class VideoCompressorApp:
             messagebox.showwarning("音频码率无效", "请选择有效的音频码率。")
             return None
 
+        speed_factor = speed_factor_from_label(self.speed_factor_text.get())
+
         return {
             "label": label,
             "target_size_mb": target_size_mb,
             "audio_bitrate_kbps": audio_bitrate_kbps,
+            "speed_factor": speed_factor,
         }
 
     def check_ffmpeg_on_startup(self):
@@ -1390,9 +1418,29 @@ class VideoCompressorApp:
                     "label": COMPRESSION_PRESETS[0][0],
                     "target_size_mb": COMPRESSION_PRESETS[0][1],
                     "audio_bitrate_kbps": COMPRESSION_PRESETS[0][2],
+                    "speed_factor": 1.0,
                 }
 
             duration_seconds = self.get_video_duration(input_file)
+            speed_factor = float(compression_options.get("speed_factor") or 1.0)
+            expected_output_duration = speed_adjusted_duration(
+                duration_seconds,
+                speed_factor,
+            )
+            has_audio = True
+            if speed_factor_enabled(speed_factor):
+                try:
+                    source_media_info = probe_media(
+                        input_file,
+                        self.ffprobe_path,
+                        creationflags=self.get_creation_flags(),
+                    )
+                    has_audio = bool(
+                        source_media_info.audio_codec
+                        or source_media_info.audio_bitrate_kbps
+                    )
+                except RuntimeError:
+                    has_audio = True
             video_bitrate_kbps, audio_bitrate_kbps, strategy = self.calculate_target_bitrates(
                 duration_seconds,
                 compression_options,
@@ -1409,6 +1457,11 @@ class VideoCompressorApp:
             self.log_queue.put(f"压缩策略：{strategy}")
             self.log_queue.put(f"自动计算的视频码率：{video_bitrate_kbps}k")
             self.log_queue.put(f"音频码率：{audio_bitrate_kbps}k")
+            if speed_factor_enabled(speed_factor):
+                self.log_queue.put(f"时长压缩：{format_speed_factor(speed_factor)}（保持音调）")
+                self.log_queue.put(f"预计输出时长：{format_duration(expected_output_duration)}")
+                if not has_audio:
+                    self.log_queue.put("未检测到音频流，仅加速画面。")
             if video_bitrate_kbps < QUALITY_WARNING_VIDEO_BITRATE_KBPS:
                 self.log_queue.put("视频时长过长，压到目标大小会明显损失画质。")
 
@@ -1420,20 +1473,25 @@ class VideoCompressorApp:
                 "pipe:1",
                 "-i",
                 str(input_file),
-                "-c:v",
-                "libx264",
-                "-b:v",
-                f"{video_bitrate_kbps}k",
-                "-maxrate",
-                f"{video_bitrate_kbps}k",
-                "-bufsize",
-                f"{bufsize_kbps}k",
-                "-c:a",
-                "aac",
-                "-b:a",
-                f"{audio_bitrate_kbps}k",
-                str(output_file),
             ]
+            command.extend(build_speed_filter_args(speed_factor, include_audio=has_audio))
+            command.extend(
+                [
+                    "-c:v",
+                    "libx264",
+                    "-b:v",
+                    f"{video_bitrate_kbps}k",
+                    "-maxrate",
+                    f"{video_bitrate_kbps}k",
+                    "-bufsize",
+                    f"{bufsize_kbps}k",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    f"{audio_bitrate_kbps}k",
+                    str(output_file),
+                ]
+            )
 
             self.log_queue.put("正在执行 ffmpeg，请等待...")
 
@@ -1466,10 +1524,10 @@ class VideoCompressorApp:
 
                         key, value = line.split("=", 1)
                         current_seconds = self.parse_progress_seconds(key, value)
-                        if current_seconds is not None and duration_seconds > 0:
+                        if current_seconds is not None and expected_output_duration > 0:
                             current_file_progress = min(
                                 1.0,
-                                max(0.0, current_seconds / duration_seconds),
+                                max(0.0, current_seconds / expected_output_duration),
                             )
                             self.queue_progress(
                                 completed_count,
